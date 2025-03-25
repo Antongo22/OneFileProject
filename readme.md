@@ -56,8 +56,7 @@ python main.py
   "ignore_folders": [".git", "node_modules"],
   "ignore_files": [".env", "*.log"],
   "ignore_paths": ["temp/*", "src/experimental/**"],
-  "show_hidden": false,
-  "colors_enabled": true
+  "show_hidden": false
 }
 ```
 
