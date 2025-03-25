@@ -14,6 +14,7 @@ init(autoreset=True)
 
 PROGRAM_NAME = "ofp"
 CONFIG_FILE = "project_documenter_config.json"
+VERSION="v2.1.0"
 
 COLORS = {
     'error': Fore.RED,
@@ -97,18 +98,23 @@ def print_help(lang='en'):
                 ("conf", "Открыть файл конфигурации"),
                 ("reset", "Сбросить и конфиг и выходной файл"),
                 ("redo", "Перегенерировать документацию используя существующий конфиг"),
+                ("update", "Обновить программу до последней версии"),
                 ("uninstall", "Удалить программу"),
                 ("help", "Показать эту справку")
             ],
             'options_list': [
                 ("-c", "Сбросить только конфигурацию"),
-                ("-o", "Сбросить только выходной файл")
+                ("-o", "Сбросить только выходной файл"),
+                ("-ru", "Вывести справку на русском"),
+                ("-en", "Вывести справку на английском")
             ],
             'examples_list': [
                 (f"{PROGRAM_NAME} .", "Документировать текущую директорию"),
                 (f"{PROGRAM_NAME} open", "Открыть сгенерированную документацию"),
                 (f"{PROGRAM_NAME} reset -c", "Сбросить только конфигурацию"),
-                (f"{PROGRAM_NAME} redo", "Перегенерировать документацию")
+                (f"{PROGRAM_NAME} redo", "Перегенерировать документацию"),
+                (f"{PROGRAM_NAME} update", "Обновить программу из репозитория"),
+                (f"{PROGRAM_NAME} help -ru", "Справка на русском языке")
             ]
         },
         'en': {
@@ -123,18 +129,23 @@ def print_help(lang='en'):
                 ("conf", "Open config file"),
                 ("reset", "Reset both config and output files"),
                 ("redo", "Regenerate documentation using existing config"),
+                ("update", "Update program to latest version"),
                 ("uninstall", "Uninstall the program"),
                 ("help", "Show this help message")
             ],
             'options_list': [
                 ("-c", "Reset only config file"),
-                ("-o", "Reset only output file")
+                ("-o", "Reset only output file"),
+                ("-ru", "Show help in Russian"),
+                ("-en", "Show help in English")
             ],
             'examples_list': [
                 (f"{PROGRAM_NAME} .", "Document current directory"),
                 (f"{PROGRAM_NAME} open", "Open generated documentation"),
                 (f"{PROGRAM_NAME} reset -c", "Reset only configuration"),
-                (f"{PROGRAM_NAME} redo", "Regenerate documentation")
+                (f"{PROGRAM_NAME} redo", "Regenerate documentation"),
+                (f"{PROGRAM_NAME} update", "Update program from repository"),
+                (f"{PROGRAM_NAME} help -ru", "Show help in Russian")
             ]
         }
     }
@@ -150,20 +161,19 @@ def print_help(lang='en'):
 {color_text(texts['commands'], 'info')}"""
 
     for cmd, desc in texts['commands_list']:
-        help_text += f"\n  {color_text(cmd, 'path')}{' ' * (15 - len(cmd))}{desc}"
+        help_text += f"\n  {color_text(cmd, 'path')}{' '*(15-len(cmd))}{desc}"
 
     help_text += f"\n\n{color_text(texts['reset_opts'], 'info')}"
 
     for opt, desc in texts['options_list']:
-        help_text += f"\n  {color_text(opt, 'path')}{' ' * (15 - len(opt))}{desc}"
+        help_text += f"\n  {color_text(opt, 'path')}{' '*(15-len(opt))}{desc}"
 
     help_text += f"\n\n{color_text(texts['examples'], 'info')}"
 
     for ex, desc in texts['examples_list']:
-        help_text += f"\n  {ex}{' ' * (20 - len(ex))}{desc}"
+        help_text += f"\n  {ex}{' '*(20-len(ex))}{desc}"
 
     print(help_text)
-
 
 def parse_args():
     """Разбирает аргументы командной строки с проверкой существования папки"""
@@ -183,6 +193,9 @@ def parse_args():
             sys.exit(0)
         elif "uninstall" in sys.argv[1:]:
             installer.uninstall()
+            sys.exit(0)
+        elif "update" in sys.argv[1:]:
+            installer.update()
             sys.exit(0)
         elif "open" in sys.argv[1:]:
             open_output_file()
@@ -355,7 +368,7 @@ def print_header():
   \____/|_| |_|\___| |_|    |_|_|\___| |_|   |_|  \___/| |\___|\___|\__|
                                                       _/ |              
                                                      |__/              
-    {PROGRAM_NAME.upper()} v1.0
+    {PROGRAM_NAME.upper()} {VERSION}
     """
     print(color_text(header, 'highlight'))
     print(color_text("=" * 60, 'info') + "\n")
