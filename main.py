@@ -81,60 +81,123 @@ def handle_ctrl_c(signum, frame):
 
 signal.signal(signal.SIGINT, handle_ctrl_c)
 
-def print_help():
-    """Выводит информацию о доступных командах и флагах на русском"""
+
+def print_help(lang='en'):
+    """Выводит информацию о доступных командах и флагах на выбранном языке"""
+    help_texts = {
+        'ru': {
+            'title': f"{PROGRAM_NAME.upper()} - Генератор документации проекта",
+            'usage': "Использование:",
+            'commands': "Команды:",
+            'reset_opts': "Опции для 'reset':",
+            'examples': "Примеры:",
+            'commands_list': [
+                (".", "Документировать текущую директорию (по умолчанию)"),
+                ("open", "Открыть выходной файл в программе по умолчанию"),
+                ("conf", "Открыть файл конфигурации"),
+                ("reset", "Сбросить и конфиг и выходной файл"),
+                ("redo", "Перегенерировать документацию используя существующий конфиг"),
+                ("uninstall", "Удалить программу"),
+                ("help", "Показать эту справку")
+            ],
+            'options_list': [
+                ("-c", "Сбросить только конфигурацию"),
+                ("-o", "Сбросить только выходной файл")
+            ],
+            'examples_list': [
+                (f"{PROGRAM_NAME} .", "Документировать текущую директорию"),
+                (f"{PROGRAM_NAME} open", "Открыть сгенерированную документацию"),
+                (f"{PROGRAM_NAME} reset -c", "Сбросить только конфигурацию"),
+                (f"{PROGRAM_NAME} redo", "Перегенерировать документацию")
+            ]
+        },
+        'en': {
+            'title': f"{PROGRAM_NAME.upper()} - Project Documentation Generator",
+            'usage': "Usage:",
+            'commands': "Commands:",
+            'reset_opts': "Options for 'reset':",
+            'examples': "Examples:",
+            'commands_list': [
+                (".", "Document current directory (default)"),
+                ("open", "Open output file in default application"),
+                ("conf", "Open config file"),
+                ("reset", "Reset both config and output files"),
+                ("redo", "Regenerate documentation using existing config"),
+                ("uninstall", "Uninstall the program"),
+                ("help", "Show this help message")
+            ],
+            'options_list': [
+                ("-c", "Reset only config file"),
+                ("-o", "Reset only output file")
+            ],
+            'examples_list': [
+                (f"{PROGRAM_NAME} .", "Document current directory"),
+                (f"{PROGRAM_NAME} open", "Open generated documentation"),
+                (f"{PROGRAM_NAME} reset -c", "Reset only configuration"),
+                (f"{PROGRAM_NAME} redo", "Regenerate documentation")
+            ]
+        }
+    }
+
+    texts = help_texts.get(lang, help_texts['en'])
+
     help_text = f"""
-{color_text(f"{PROGRAM_NAME.upper()} - Генератор документации проекта", 'highlight')}
+{color_text(texts['title'], 'highlight')}
 
-{color_text("Использование:", 'info')}
-  {PROGRAM_NAME} [команда] [опции]
+{color_text(texts['usage'], 'info')}
+  {PROGRAM_NAME} [command] [options]
 
-{color_text("Команды:", 'info')}
-  {color_text(".", 'path')}               Документировать текущую директорию (по умолчанию, если команда не указана)
-  {color_text("open", 'path')}            Открыть выходной файл в программе по умолчанию
-  {color_text("conf", 'path')}            Открыть файл конфигурации
-  {color_text("reset", 'path')}           Сбросить и конфиг и выходной файл
-  {color_text("redo", 'path')}            Перегенерировать документацию используя существующий конфиг
-  {color_text("uninstall", 'path')}       Удалить программу
-  {color_text("help", 'path')}            Показать эту справку
+{color_text(texts['commands'], 'info')}"""
 
-{color_text("Опции для 'reset':", 'info')}
-  {color_text("-c", 'path')}              Сбросить только конфигурацию
-  {color_text("-o", 'path')}              Сбросить только выходной файл
+    for cmd, desc in texts['commands_list']:
+        help_text += f"\n  {color_text(cmd, 'path')}{' ' * (15 - len(cmd))}{desc}"
 
-{color_text("Примеры:", 'info')}
-  {PROGRAM_NAME} .               Документировать текущую директорию
-  {PROGRAM_NAME} open            Открыть сгенерированную документацию
-  {PROGRAM_NAME} reset -c        Сбросить только конфигурацию
-  {PROGRAM_NAME} redo            Перегенерировать документацию
-"""
+    help_text += f"\n\n{color_text(texts['reset_opts'], 'info')}"
+
+    for opt, desc in texts['options_list']:
+        help_text += f"\n  {color_text(opt, 'path')}{' ' * (15 - len(opt))}{desc}"
+
+    help_text += f"\n\n{color_text(texts['examples'], 'info')}"
+
+    for ex, desc in texts['examples_list']:
+        help_text += f"\n  {ex}{' ' * (20 - len(ex))}{desc}"
+
     print(help_text)
+
 
 def parse_args():
     """Разбирает аргументы командной строки"""
+    lang = 'en'
+
     if len(sys.argv) > 1:
-        if sys.argv[1] in ("-h", "--help", "help"):
-            print_help()
+        if '-ru' in sys.argv:
+            lang = 'ru'
+            sys.argv.remove('-ru')
+        elif '-en' in sys.argv:
+            lang = 'en'
+            sys.argv.remove('-en')
+
+        if any(x in sys.argv[1:] for x in ("-h", "--help", "help", "помощь")):
+            print_help(lang)
             sys.exit(0)
-        elif sys.argv[1] == "unins  tall":
+        elif "uninstall" in sys.argv[1:]:
             installer.uninstall()
             sys.exit(0)
-        elif sys.argv[1] == "open":
+        elif "open" in sys.argv[1:]:
             open_output_file()
             sys.exit(0)
-        elif sys.argv[1] == "conf":
+        elif "conf" in sys.argv[1:]:
             open_config_file()
             sys.exit(0)
-        elif sys.argv[1] == "reset":
+        elif "reset" in sys.argv[1:]:
             handle_reset_command()
             sys.exit(0)
-        elif sys.argv[1] == "redo":
+        elif "redo" in sys.argv[1:]:
             redo_documentation()
             sys.exit(0)
 
     project_path = os.getcwd() if len(sys.argv) > 1 and sys.argv[1] == "." else None
-
-    return project_path
+    return project_path, lang
 
 
 def open_output_file():
