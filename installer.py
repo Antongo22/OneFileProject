@@ -1,10 +1,8 @@
-#!/usr/bin/env python3
 import os
 import sys
 import shutil
 from pathlib import Path
 
-# Конфигурация
 PROGRAM_NAME = "ofp"
 PROGRAM_FILES_DIR = "OFP_Documenter"
 
@@ -27,7 +25,7 @@ def install():
 
         current_dir = Path(__file__).parent.resolve()
         for item in current_dir.iterdir():
-            if item.name not in ['.git', '__pycache__', 'venv', 'installer.py']:
+            if item.name not in ['.git', '__pycache__', 'venv']:
                 dest = install_dir / item.name
                 if item.is_dir():
                     shutil.copytree(item, dest, dirs_exist_ok=True)

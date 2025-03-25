@@ -1,12 +1,16 @@
 import os
+import sys
 import json
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 import fnmatch
 from colorama import init, Fore, Style
 
+import installer
+
 init(autoreset=True)
 
+PROGRAM_NAME = "ofp"
 CONFIG_FILE = "project_documenter_config.json"
 
 COLORS = {
@@ -67,6 +71,17 @@ DEFAULT_CONFIG = {
 }
 
 
+def parse_args():
+    """Разбирает аргументы командной строки"""
+    if len(sys.argv) > 1 and sys.argv[1] == "uninstall":
+        installer.uninstall()
+        sys.exit(0)
+
+    project_path = os.getcwd() if len(sys.argv) > 1 and sys.argv[1] == "." else None
+
+    return project_path
+
+
 def color_text(text: str, color_type: str) -> str:
     """Возвращает цветной текст для консоли"""
     return f"{COLORS.get(color_type, '')}{text}{Style.RESET_ALL}"
@@ -74,7 +89,7 @@ def color_text(text: str, color_type: str) -> str:
 
 def print_header():
     """Выводит цветной заголовок программы"""
-    header = """
+    header = f"""
    ____               ______ _ _        _____           _           _   
   / __ \             |  ____(_) |      |  __ \         (_)         | |  
  | |  | |_ __   ___  | |__   _| | ___  | |__) | __ ___  _  ___  ___| |_ 
@@ -83,9 +98,9 @@ def print_header():
   \____/|_| |_|\___| |_|    |_|_|\___| |_|   |_|  \___/| |\___|\___|\__|
                                                       _/ |              
                                                      |__/              
+    {PROGRAM_NAME.upper()} v1.0
     """
     print(color_text(header, 'highlight'))
-    print(color_text("Project Documentation Generator v1.0", 'info'))
     print(color_text("=" * 60, 'info') + "\n")
 
 
@@ -253,8 +268,13 @@ def get_file_contents(files_info: List[Dict[str, str]]) -> str:
     return '\n'.join(contents)
 
 
-def edit_config(config: Dict) -> Dict:
+def edit_config(config: Dict, cli_project_path: str = None) -> Dict:
     """Интерактивное редактирование конфигурации"""
+    if cli_project_path:
+        config['project_path'] = cli_project_path
+        config['output_path'] = str(Path(cli_project_path).parent / "project_documentation.md")
+        return config
+
     print(color_text("\nCurrent configuration:", 'highlight'))
     print(json.dumps(config, indent=2))
 
@@ -285,10 +305,12 @@ def edit_config(config: Dict) -> Dict:
 
 
 def main():
+    cli_project_path = parse_args()
+
     print_header()
 
     config = load_config()
-    config = edit_config(config)
+    config = edit_config(config, cli_project_path)
 
     if not config['project_path']:
         print(color_text("Error: Project path is required!", 'error'))
