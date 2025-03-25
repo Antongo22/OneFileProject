@@ -7,6 +7,7 @@ from typing import Dict, List, Tuple, Optional
 import fnmatch
 from colorama import init, Fore, Style
 import signal
+import re
 
 import installer
 
@@ -14,7 +15,7 @@ init(autoreset=True)
 
 PROGRAM_NAME = "ofp"
 CONFIG_FILE = "project_documenter_config.json"
-VERSION="v2.1.0"
+VERSION="v2.2.0"
 
 COLORS = {
     'error': Fore.RED,
@@ -68,10 +69,11 @@ DEFAULT_CONFIG = {
     'project_path': '',
     'output_path': 'documentation.md',
     'ignore_folders': ['.git', '__pycache__', 'node_modules', 'venv'],
-    'ignore_files': ['.gitignore', '.env', '*.pyc'],
+    'ignore_files': ['.gitignore', '.env', CONFIG_FILE],
     'ignore_paths': [],
     'show_hidden': False
 }
+
 
 
 def handle_ctrl_c(signum, frame):
@@ -175,6 +177,7 @@ def print_help(lang='en'):
 
     print(help_text)
 
+
 def parse_args():
     """Разбирает аргументы командной строки с проверкой существования папки"""
     lang = 'en'
@@ -203,28 +206,109 @@ def parse_args():
         elif "conf" in sys.argv[1:]:
             open_config_file()
             sys.exit(0)
-
-        if "reset" in sys.argv[1:]:
+        elif "reset" in sys.argv[1:]:
             handle_reset_command()
             sys.exit(0)
         elif "redo" in sys.argv[1:]:
             redo_documentation()
             sys.exit(0)
+        elif "unpack" in sys.argv[1:]:
+            if len(sys.argv) < 4:
+                print(
+                    color_text("Ошибка: для unpack требуется 2 аргумента - файл документации и целевая папка", 'error'))
+                sys.exit(1)
+
+            args = sys.argv[2:]
+            doc_file = ' '.join(args[:-1]).strip('"\'')
+            target_dir = args[-1].strip('"\'')
+
+            unpack(doc_file, target_dir)
+            sys.exit(0)
 
         if len(sys.argv) > 1 and sys.argv[1] == ".":
             project_path = os.getcwd()
         elif len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
-            potential_path = sys.argv[1]
-            if not os.path.exists(potential_path):
-                print(color_text(f"Error: Directory '{potential_path}' does not exist!", 'error'))
-                sys.exit(1)
-            if not os.path.isdir(potential_path):
-                print(color_text(f"Error: '{potential_path}' is not a directory!", 'error'))
-                sys.exit(1)
-            project_path = os.path.abspath(potential_path)
+            if sys.argv[1] not in ["unpack", "open", "conf", "reset", "redo", "update", "uninstall"]:
+                potential_path = sys.argv[1]
+                if not os.path.exists(potential_path):
+                    print(color_text(f"Error: Path '{potential_path}' does not exist!", 'error'))
+                    sys.exit(1)
+                if not os.path.isdir(potential_path):
+                    print(color_text(f"Error: '{potential_path}' is not a directory!", 'error'))
+                    sys.exit(1)
+                project_path = os.path.abspath(potential_path)
 
     return project_path
 
+
+def unpack(doc_file: str, target_dir: str):
+    """Распаковывает проект из файла документации, пропуская уже существующие папки"""
+    try:
+        doc_path = Path(doc_file.strip('"\''))
+        target_path = Path(target_dir.strip('"\''))
+
+        if not doc_path.exists():
+            print(color_text(f"Ошибка: Файл документации '{doc_path}' не найден", 'error'))
+            return False
+
+        if target_path.exists() and any(target_path.iterdir()):
+            print(color_text(f"Ошибка: Целевая директория '{target_path}' не пуста", 'error'))
+            return False
+
+        target_path.mkdir(parents=True, exist_ok=True)
+
+        with open(doc_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        structure_match = re.search(
+            r'# (?:Структура проекта|Project Structure):.*?\n```.*?\n(.*?)\n```',
+            content,
+            re.DOTALL
+        )
+
+        if not structure_match:
+            print(color_text("Ошибка: Не найдена секция со структурой проекта", 'error'))
+            return False
+
+        first_line = structure_match.group(1).split('\n')[0].strip()
+        root_folder_name = first_line.split('/')[0].rstrip('\\/')
+
+        files_section = re.finditer(
+            r'## (.*?)\n```(?:.*?)\n(.*?)\n```\n(?:---)?',
+            content,
+            re.DOTALL
+        )
+
+        for match in files_section:
+            rel_path = match.group(1).strip()
+            file_content = match.group(2).strip()
+
+            if rel_path.startswith(root_folder_name + '/'):
+                rel_path = rel_path[len(root_folder_name) + 1:]
+
+            rel_path = rel_path.replace('│', '').strip()
+
+            try:
+                file_path = target_path / rel_path
+
+                if file_path.exists() and file_path.is_dir():
+                    continue
+
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(file_content)
+
+            except Exception as e:
+                print(color_text(f"⚠️ Не удалось создать файл {rel_path}: {str(e)}", 'warning'))
+                continue
+
+        print(color_text(f"✅ Проект успешно распакован в: {target_path}", 'success'))
+        return True
+
+    except Exception as e:
+        print(color_text(f"❌ Ошибка при распаковке: {str(e)}", 'error'))
+        return False
 
 def open_output_file():
     """Открывает выходной файл в приложении по умолчанию"""
