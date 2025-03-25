@@ -15,7 +15,7 @@ init(autoreset=True)
 
 PROGRAM_NAME = "ofp"
 CONFIG_FILE = "project_documenter_config.json"
-VERSION="v2.2.0"
+VERSION="v2.2.0 "
 
 COLORS = {
     'error': Fore.RED,
@@ -69,7 +69,22 @@ DEFAULT_CONFIG = {
     'project_path': '',
     'output_path': 'documentation.md',
     'ignore_folders': ['.git', '__pycache__', 'node_modules', 'venv'],
-    'ignore_files': ['.gitignore', '.env', CONFIG_FILE],
+    'ignore_files': ['.gitignore', '.env', CONFIG_FILE,
+                     # Изображения
+                     '*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp', '*.tiff', '*.svg',
+                     # Видео/аудио
+                     '*.mp3', '*.mp4', '*.avi', '*.mov', '*.wav',
+                     # Архивы
+                     '*.zip', '*.tar', '*.gz', '*.rar', '*.7z',
+                     # Документы
+                     '*.pdf', '*.doc', '*.docx', '*.xls', '*.xlsx', '*.ppt', '*.pptx',
+                     # Бинарные файлы
+                     '*.exe', '*.dll', '*.so', '*.bin',
+                     # Файлы IDE
+                     '*.iml', '*.swp', '*.swo',
+                     # Прочие
+                     '*.ico', '*.icns', '*.jar', '*.war'
+                     ],
     'ignore_paths': [],
     'show_hidden': False
 }
