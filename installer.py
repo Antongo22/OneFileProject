@@ -75,9 +75,6 @@ def install():
     try:
         install_dir = get_install_dir()
 
-        if install_dir.exists():
-            shutil.rmtree(install_dir, onerror=handle_remove_readonly)
-
         install_dir.mkdir(parents=True, exist_ok=True)
         print(f"🔄 Устанавливаю программу в: {install_dir}")
 
@@ -91,23 +88,18 @@ def install():
                     shutil.copy2(item, dest)
 
         if sys.platform == "win32":
-            bin_path = Path(os.environ.get('APPDATA',
-                                           'C:\\Users\\%USERNAME%\\AppData\\Roaming')) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
-            bin_path.mkdir(parents=True, exist_ok=True)
-
-            bat_path = bin_path / f"{PROGRAM_NAME}.bat"
-            with open(bat_path, 'w', encoding='utf-8') as f:
-                f.write(f'@echo off\npython "{install_dir / "main.py"}" %*')
-
-            os.environ['PATH'] += f";{bin_path}"
+            bin_path = Path.home() / "AppData" / "Local" / "Microsoft" / "WindowsApps"
+            bin_path.mkdir(exist_ok=True)
+            target_path = bin_path / f"{PROGRAM_NAME}.bat"
+            bat_content = f'@python "{install_dir / "main.py"}" %*'
+            with open(target_path, 'w', encoding='utf-8') as f:
+                f.write(bat_content)
         else:
             bin_path = Path.home() / ".local" / "bin"
             bin_path.mkdir(exist_ok=True)
-
             target_path = bin_path / PROGRAM_NAME
             if target_path.exists():
                 target_path.unlink()
-
             os.symlink(install_dir / "main.py", target_path)
             os.chmod(install_dir / "main.py", 0o755)
 
@@ -128,8 +120,9 @@ def install():
                 print("И выполните: source ~/.bashrc")
 
     except Exception as e:
-        print(f"\n❌ Ошибка установки: {str(e)}")
+        print(f"\n❌ Ошибка установки: {e}")
         sys.exit(1)
+
 
 
 def uninstall():
@@ -138,22 +131,20 @@ def uninstall():
         install_dir = get_install_dir()
 
         if install_dir.exists():
-            shutil.rmtree(install_dir, onerror=handle_remove_readonly)
+            shutil.rmtree(install_dir)
             print(f"✅ Удалена директория: {install_dir}")
 
         if sys.platform == "win32":
-            bin_path = Path(os.environ.get('APPDATA')) / "Microsoft" / "Windows" / "Start Menu" / "Programs"
-            target_path = bin_path / f"{PROGRAM_NAME}.bat"
+            target_path = Path.home() / "AppData" / "Local" / "Microsoft" / "WindowsApps" / f"{PROGRAM_NAME}.bat"
         else:
-            bin_path = Path.home() / ".local" / "bin"
-            target_path = bin_path / PROGRAM_NAME
+            target_path = Path.home() / ".local" / "bin" / PROGRAM_NAME
 
         if target_path.exists():
-            target_path.unlink(missing_ok=True)
+            target_path.unlink()
             print(f"✅ Удалена команда: {PROGRAM_NAME}")
 
     except Exception as e:
-        print(f"❌ Ошибка удаления: {str(e)}")
+        print(f"❌ Ошибка удаления: {e}")
         sys.exit(1)
 
 
