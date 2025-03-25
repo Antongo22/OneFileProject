@@ -1,10 +1,12 @@
 import os
 import sys
 import json
+import subprocess
 from pathlib import Path
 from typing import Dict, List, Tuple, Optional
 import fnmatch
 from colorama import init, Fore, Style
+import signal
 
 import installer
 
@@ -71,15 +73,194 @@ DEFAULT_CONFIG = {
 }
 
 
+def handle_ctrl_c(signum, frame):
+    """Обработка нажатия Ctrl+C"""
+    print(color_text("\n\nOperation cancelled by user", 'warning'))
+    sys.exit(1)
+
+
+signal.signal(signal.SIGINT, handle_ctrl_c)
+
+def print_help():
+    """Выводит информацию о доступных командах и флагах на русском"""
+    help_text = f"""
+{color_text(f"{PROGRAM_NAME.upper()} - Генератор документации проекта", 'highlight')}
+
+{color_text("Использование:", 'info')}
+  {PROGRAM_NAME} [команда] [опции]
+
+{color_text("Команды:", 'info')}
+  {color_text(".", 'path')}               Документировать текущую директорию (по умолчанию, если команда не указана)
+  {color_text("open", 'path')}            Открыть выходной файл в программе по умолчанию
+  {color_text("conf", 'path')}            Открыть файл конфигурации
+  {color_text("reset", 'path')}           Сбросить и конфиг и выходной файл
+  {color_text("redo", 'path')}            Перегенерировать документацию используя существующий конфиг
+  {color_text("uninstall", 'path')}       Удалить программу
+  {color_text("help", 'path')}            Показать эту справку
+
+{color_text("Опции для 'reset':", 'info')}
+  {color_text("-c", 'path')}              Сбросить только конфигурацию
+  {color_text("-o", 'path')}              Сбросить только выходной файл
+
+{color_text("Примеры:", 'info')}
+  {PROGRAM_NAME} .               Документировать текущую директорию
+  {PROGRAM_NAME} open            Открыть сгенерированную документацию
+  {PROGRAM_NAME} reset -c        Сбросить только конфигурацию
+  {PROGRAM_NAME} redo            Перегенерировать документацию
+"""
+    print(help_text)
+
 def parse_args():
     """Разбирает аргументы командной строки"""
-    if len(sys.argv) > 1 and sys.argv[1] == "uninstall":
-        installer.uninstall()
-        sys.exit(0)
+    if len(sys.argv) > 1:
+        if sys.argv[1] in ("-h", "--help", "help"):
+            print_help()
+            sys.exit(0)
+        elif sys.argv[1] == "unins  tall":
+            installer.uninstall()
+            sys.exit(0)
+        elif sys.argv[1] == "open":
+            open_output_file()
+            sys.exit(0)
+        elif sys.argv[1] == "conf":
+            open_config_file()
+            sys.exit(0)
+        elif sys.argv[1] == "reset":
+            handle_reset_command()
+            sys.exit(0)
+        elif sys.argv[1] == "redo":
+            redo_documentation()
+            sys.exit(0)
 
     project_path = os.getcwd() if len(sys.argv) > 1 and sys.argv[1] == "." else None
 
     return project_path
+
+
+def open_output_file():
+    """Открывает выходной файл в приложении по умолчанию"""
+    config = load_config()
+    if not config['output_path']:
+        print(color_text("Error: Output path is not set in config", 'error'))
+        return
+
+    output_path = Path(config['output_path'])
+    if not output_path.exists():
+        print(color_text(f"Error: Output file {output_path} does not exist", 'error'))
+        return
+
+    try:
+        if sys.platform == 'win32':
+            os.startfile(output_path)
+        elif sys.platform == 'darwin':
+            subprocess.run(['open', output_path])
+        else:
+            subprocess.run(['xdg-open', output_path])
+        print(color_text(f"Opened output file: {output_path}", 'success'))
+    except Exception as e:
+        print(color_text(f"Error opening file: {str(e)}", 'error'))
+
+
+def open_config_file():
+    """Открывает файл конфигурации в приложении по умолчанию"""
+    config_path = Path(CONFIG_FILE)
+    if not config_path.exists():
+        print(color_text("Error: Config file does not exist", 'error'))
+        return
+
+    try:
+        if sys.platform == 'win32':
+            os.startfile(config_path)
+        elif sys.platform == 'darwin':
+            subprocess.run(['open', config_path])
+        else:
+            subprocess.run(['xdg-open', config_path])
+        print(color_text(f"Opened config file: {config_path}", 'success'))
+    except Exception as e:
+        print(color_text(f"Error opening config file: {str(e)}", 'error'))
+
+
+def handle_reset_command():
+    """Обрабатывает команду reset"""
+    if len(sys.argv) > 2:
+        if sys.argv[2] == '-c':
+            reset_config()
+        elif sys.argv[2] == '-o':
+            reset_output()
+        else:
+            print(color_text("Invalid reset option. Use -c for config or -o for output", 'error'))
+    else:
+        reset_config()
+        reset_output()
+
+
+def reset_config():
+    """Сбрасывает конфигурацию"""
+    try:
+        if os.path.exists(CONFIG_FILE):
+            os.remove(CONFIG_FILE)
+            print(color_text("Config file has been reset", 'success'))
+        else:
+            print(color_text("Config file does not exist", 'warning'))
+    except Exception as e:
+        print(color_text(f"Error resetting config: {str(e)}", 'error'))
+
+
+def reset_output():
+    """Сбрасывает выходной файл"""
+    config = load_config()
+    if not config['output_path']:
+        print(color_text("Output path is not set in config", 'warning'))
+        return
+
+    output_path = Path(config['output_path'])
+    try:
+        if output_path.exists():
+            output_path.unlink()
+            print(color_text(f"Output file {output_path} has been reset", 'success'))
+        else:
+            print(color_text(f"Output file {output_path} does not exist", 'warning'))
+    except Exception as e:
+        print(color_text(f"Error resetting output file: {str(e)}", 'error'))
+
+
+def redo_documentation():
+    """Повторно генерирует документацию без вопросов пользователя"""
+    if not os.path.exists(CONFIG_FILE):
+        print(color_text("Error: Config file does not exist. Run the program without 'redo' first.", 'error'))
+        return
+
+    config = load_config()
+    if not config['project_path']:
+        print(color_text("Error: Project path is not set in config", 'error'))
+        return
+
+    try:
+        root_path = os.path.normpath(config['project_path'])
+        root_name = os.path.basename(root_path)
+
+        print(color_text("\nScanning project structure...", 'info'))
+        tree, files = generate_file_tree(root_path, config)
+
+        print(color_text("\nGenerating documentation...", 'info'))
+        md_content = (
+            f"# Project Structure: {root_name}\n\n"
+            f"```\n{root_name}/\n{tree}\n```\n\n"
+            f"# Files Content\n\n{get_file_contents(files)}"
+        )
+
+        output_path = Path(config['output_path'])
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(md_content)
+
+        print(color_text("\nDocumentation regenerated successfully!", 'success'))
+        print(color_text(f"Output file: {output_path}", 'path'))
+        print(color_text(f"Total files processed: {len(files)}", 'info'))
+
+    except Exception as e:
+        print(color_text(f"\nError: {str(e)}", 'error'))
 
 
 def color_text(text: str, color_type: str) -> str:
