@@ -15,7 +15,7 @@ init(autoreset=True)
 
 PROGRAM_NAME = "ofp"
 CONFIG_FILE = "project_documenter_config.json"
-VERSION="v2.2.0 "
+VERSION = "v2.3.0 "
 
 COLORS = {
     'error': Fore.RED,
@@ -90,7 +90,6 @@ DEFAULT_CONFIG = {
 }
 
 
-
 def handle_ctrl_c(signum, frame):
     """Обработка нажатия Ctrl+C"""
     print(color_text("\n\nOperation cancelled by user", 'warning'))
@@ -101,96 +100,47 @@ signal.signal(signal.SIGINT, handle_ctrl_c)
 
 
 def print_help(lang='en'):
-    """Выводит информацию о доступных командах и флагах на выбранном языке"""
-    help_texts = {
-        'ru': {
-            'title': f"{PROGRAM_NAME.upper()} - Генератор документации проекта",
-            'usage': "Использование:",
-            'commands': "Команды:",
-            'reset_opts': "Опции для 'reset':",
-            'examples': "Примеры:",
-            'commands_list': [
-                (".", "Документировать текущую директорию (по умолчанию)"),
-                ("open", "Открыть выходной файл в программе по умолчанию"),
-                ("conf", "Открыть файл конфигурации"),
-                ("reset", "Сбросить и конфиг и выходной файл"),
-                ("redo", "Перегенерировать документацию используя существующий конфиг"),
-                ("update", "Обновить программу до последней версии"),
-                ("uninstall", "Удалить программу"),
-                ("help", "Показать эту справку")
-            ],
-            'options_list': [
-                ("-c", "Сбросить только конфигурацию"),
-                ("-o", "Сбросить только выходной файл"),
-                ("-ru", "Вывести справку на русском"),
-                ("-en", "Вывести справку на английском")
-            ],
-            'examples_list': [
-                (f"{PROGRAM_NAME} .", "Документировать текущую директорию"),
-                (f"{PROGRAM_NAME} open", "Открыть сгенерированную документацию"),
-                (f"{PROGRAM_NAME} reset -c", "Сбросить только конфигурацию"),
-                (f"{PROGRAM_NAME} redo", "Перегенерировать документацию"),
-                (f"{PROGRAM_NAME} update", "Обновить программу из репозитория"),
-                (f"{PROGRAM_NAME} help -ru", "Справка на русском языке")
-            ]
-        },
-        'en': {
-            'title': f"{PROGRAM_NAME.upper()} - Project Documentation Generator",
-            'usage': "Usage:",
-            'commands': "Commands:",
-            'reset_opts': "Options for 'reset':",
-            'examples': "Examples:",
-            'commands_list': [
-                (".", "Document current directory (default)"),
-                ("open", "Open output file in default application"),
-                ("conf", "Open config file"),
-                ("reset", "Reset both config and output files"),
-                ("redo", "Regenerate documentation using existing config"),
-                ("update", "Update program to latest version"),
-                ("uninstall", "Uninstall the program"),
-                ("help", "Show this help message")
-            ],
-            'options_list': [
-                ("-c", "Reset only config file"),
-                ("-o", "Reset only output file"),
-                ("-ru", "Show help in Russian"),
-                ("-en", "Show help in English")
-            ],
-            'examples_list': [
-                (f"{PROGRAM_NAME} .", "Document current directory"),
-                (f"{PROGRAM_NAME} open", "Open generated documentation"),
-                (f"{PROGRAM_NAME} reset -c", "Reset only configuration"),
-                (f"{PROGRAM_NAME} redo", "Regenerate documentation"),
-                (f"{PROGRAM_NAME} update", "Update program from repository"),
-                (f"{PROGRAM_NAME} help -ru", "Show help in Russian")
-            ]
-        }
-    }
+    """Выводит информацию о доступных командах и флагах из JSON-файлов"""
+    try:
+        help_file = Path(__file__).parent / 'help_texts' / f'{lang}.json'
 
-    texts = help_texts.get(lang, help_texts['en'])
+        if not help_file.exists():
+            print(color_text(f"\nError: Help file for language '{lang}' not found\n", 'error'))
+            help_file = Path(__file__).parent / 'help_texts' / 'en.json'
+            if not help_file.exists():
+                print(color_text("\nError: Default help file not found\n", 'error'))
+                return
 
-    help_text = f"""
+        with open(help_file, 'r', encoding='utf-8') as f:
+            texts = json.load(f)
+
+        help_text = f"""
 {color_text(texts['title'], 'highlight')}
 
 {color_text(texts['usage'], 'info')}
-  {PROGRAM_NAME} [command] [options]
+    {PROGRAM_NAME} [command] [options]
 
 {color_text(texts['commands'], 'info')}"""
 
-    for cmd, desc in texts['commands_list']:
-        help_text += f"\n  {color_text(cmd, 'path')}{' '*(15-len(cmd))}{desc}"
+        for cmd, desc in texts['commands_list']:
+            help_text += f"\n    {color_text(cmd, 'path')}{' ' * (20 - len(cmd))}{desc}"
 
-    help_text += f"\n\n{color_text(texts['reset_opts'], 'info')}"
+        help_text += f"\n\n{color_text(texts['reset_opts'], 'info')}"
 
-    for opt, desc in texts['options_list']:
-        help_text += f"\n  {color_text(opt, 'path')}{' '*(15-len(opt))}{desc}"
+        for opt, desc in texts['options_list']:
+            help_text += f"\n    {color_text(opt, 'path')}{' ' * (20 - len(opt))}{desc}"
 
-    help_text += f"\n\n{color_text(texts['examples'], 'info')}"
+        help_text += f"\n\n{color_text(texts['examples'], 'info')}"
 
-    for ex, desc in texts['examples_list']:
-        help_text += f"\n  {ex}{' '*(20-len(ex))}{desc}"
+        for ex, desc in texts['examples_list']:
+            help_text += f"\n    {ex}{' ' * (30 - len(ex))}{desc}"
 
-    print(help_text)
+        help_text = f"\n{help_text}\n"
+
+        print(help_text)
+
+    except Exception as e:
+        print(color_text(f"\nError loading help: {str(e)}\n", 'error'))
 
 
 def parse_args():
@@ -230,7 +180,7 @@ def parse_args():
         elif "unpack" in sys.argv[1:]:
             if len(sys.argv) < 4:
                 print(
-                    color_text("Ошибка: для unpack требуется 2 аргумента - файл документации и целевая папка", 'error'))
+                    color_text("Error: unpack requires 2 arguments - the documentation file and the target folder", 'error'))
                 sys.exit(1)
 
             args = sys.argv[2:]
@@ -263,11 +213,11 @@ def unpack(doc_file: str, target_dir: str):
         target_path = Path(target_dir.strip('"\''))
 
         if not doc_path.exists():
-            print(color_text(f"Ошибка: Файл документации '{doc_path}' не найден", 'error'))
+            print(color_text(f"Error: The documentation file '{doc_path}' was not found", 'error'))
             return False
 
         if target_path.exists() and any(target_path.iterdir()):
-            print(color_text(f"Ошибка: Целевая директория '{target_path}' не пуста", 'error'))
+            print(color_text(f"Error: The target directory '{target_path}' is not empty", 'error'))
             return False
 
         target_path.mkdir(parents=True, exist_ok=True)
@@ -282,7 +232,7 @@ def unpack(doc_file: str, target_dir: str):
         )
 
         if not structure_match:
-            print(color_text("Ошибка: Не найдена секция со структурой проекта", 'error'))
+            print(color_text("Error: The section with the project structure was not found.", 'error'))
             return False
 
         first_line = structure_match.group(1).split('\n')[0].strip()
@@ -315,15 +265,16 @@ def unpack(doc_file: str, target_dir: str):
                     f.write(file_content)
 
             except Exception as e:
-                print(color_text(f"⚠️ Не удалось создать файл {rel_path}: {str(e)}", 'warning'))
+                print(color_text(f"⚠️ Failed to create {rel_path} file: {str(e)}", 'warning'))
                 continue
 
-        print(color_text(f"✅ Проект успешно распакован в: {target_path}", 'success'))
+        print(color_text(f"✅ The project has been successfully unpacked in: {target_path}", 'success'))
         return True
 
     except Exception as e:
-        print(color_text(f"❌ Ошибка при распаковке: {str(e)}", 'error'))
+        print(color_text(f"❌ Unpacking error: {str(e)}", 'error'))
         return False
+
 
 def open_output_file():
     """Открывает выходной файл в приложении по умолчанию"""
