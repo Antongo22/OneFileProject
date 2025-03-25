@@ -37,6 +37,12 @@
 ```bash
 git clone https://github.com/Antongo22/OneFileProject
 pip install colorama
+cd OneFileProject
+```
+
+### Старт
+```bash
+python main.py
 ```
 
 ### Базовое использование
