@@ -40,6 +40,11 @@ pip install colorama
 cd OneFileProject
 ```
 
+### Старт
+```bash
+python main.py
+```
+
 ### Базовое использование
 ```bash
 python main.py
