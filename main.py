@@ -166,8 +166,9 @@ def print_help(lang='en'):
 
 
 def parse_args():
-    """Разбирает аргументы командной строки"""
+    """Разбирает аргументы командной строки с проверкой существования папки"""
     lang = 'en'
+    project_path = None
 
     if len(sys.argv) > 1:
         if '-ru' in sys.argv:
@@ -189,15 +190,27 @@ def parse_args():
         elif "conf" in sys.argv[1:]:
             open_config_file()
             sys.exit(0)
-        elif "reset" in sys.argv[1:]:
+
+        if "reset" in sys.argv[1:]:
             handle_reset_command()
             sys.exit(0)
         elif "redo" in sys.argv[1:]:
             redo_documentation()
             sys.exit(0)
 
-    project_path = os.getcwd() if len(sys.argv) > 1 and sys.argv[1] == "." else None
-    return project_path, lang
+        if len(sys.argv) > 1 and sys.argv[1] == ".":
+            project_path = os.getcwd()
+        elif len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
+            potential_path = sys.argv[1]
+            if not os.path.exists(potential_path):
+                print(color_text(f"Error: Directory '{potential_path}' does not exist!", 'error'))
+                sys.exit(1)
+            if not os.path.isdir(potential_path):
+                print(color_text(f"Error: '{potential_path}' is not a directory!", 'error'))
+                sys.exit(1)
+            project_path = os.path.abspath(potential_path)
+
+    return project_path
 
 
 def open_output_file():
