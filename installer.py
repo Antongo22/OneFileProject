@@ -5,6 +5,8 @@ import subprocess
 import stat
 from pathlib import Path
 
+import main
+
 PROGRAM_NAME = "ofp"
 PROGRAM_FILES_DIR = "OFP_Documenter"
 REPO_URL = "https://github.com/Antongo22/OneFileProject"
@@ -23,12 +25,12 @@ def get_install_dir():
     else:
         return Path.home() / ".local" / "lib" / PROGRAM_FILES_DIR.lower()
 
-
 def update():
-    """Обновляет программу через git pull"""
+    """Обновляет программу через git pull с выводом информации о версиях"""
     temp_dir = None
     try:
         install_dir = get_install_dir()
+        current_version = main.VERSION
 
         if not install_dir.exists():
             print("❌ Программа не установлена. Сначала выполните установку.")
@@ -38,18 +40,24 @@ def update():
         if temp_dir.exists():
             shutil.rmtree(temp_dir, onerror=handle_remove_readonly)
 
-        print("🔄 Клонируем репозиторий для обновления...")
+        print(f"🔄 Клонируем репозиторий для обновления (текущая версия: {current_version})...")
         subprocess.run(["git", "clone", REPO_URL, temp_dir], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        version_file = temp_dir / "version"
+        if version_file.exists():
+            with open(version_file, 'r') as f:
+                new_version = f.read().strip()
+        else:
+            new_version = "unknown"
 
         git_dir = temp_dir / ".git"
         if git_dir.exists():
             shutil.rmtree(git_dir, onerror=handle_remove_readonly)
 
         shutil.rmtree(install_dir, onerror=handle_remove_readonly)
-
         shutil.move(temp_dir, install_dir)
 
-        print("✅ Программа успешно обновлена!")
+        print(f"✅ Программа успешно обновлена с {current_version} на {new_version}!")
 
     except subprocess.CalledProcessError as e:
         print(f"❌ Ошибка при выполнении git: {e.stderr.decode().strip()}")
@@ -61,7 +69,6 @@ def update():
                 shutil.rmtree(temp_dir, onerror=handle_remove_readonly)
             except Exception:
                 pass
-
 
 def install():
     """Устанавливает программу в пользовательскую директорию"""

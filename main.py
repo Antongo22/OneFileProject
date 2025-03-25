@@ -15,7 +15,19 @@ init(autoreset=True)
 
 PROGRAM_NAME = "ofp"
 CONFIG_FILE = "project_documenter_config.json"
-VERSION = "v2.3.0 "
+
+def get_version():
+    """Получает версию из файла version или возвращает v0.0.0 при ошибке"""
+    try:
+        with open(Path(__file__).parent / 'version', 'r') as f:
+            version = f.read().strip()
+            if version and version[0].isdigit():
+                return f"v{version.split()[0]}"
+            return version.split()[0] if version else "v/././"
+    except:
+        return "v0.0.0"
+
+VERSION = get_version()
 
 COLORS = {
     'error': Fore.RED,
@@ -177,23 +189,26 @@ def parse_args():
         elif "redo" in sys.argv[1:]:
             redo_documentation()
             sys.exit(0)
+        elif "version" in sys.argv[1:]:
+            print(f"Current version: {color_text(VERSION, 'highlight')}")
+            sys.exit(0)
         elif "unpack" in sys.argv[1:]:
             if len(sys.argv) < 4:
-                print(
-                    color_text("Error: unpack requires 2 arguments - the documentation file and the target folder", 'error'))
+                print(color_text("Error: unpack requires 2 arguments - the documentation file and the target folder",
+                                 'error'))
                 sys.exit(1)
 
             args = sys.argv[2:]
             doc_file = ' '.join(args[:-1]).strip('"\'')
             target_dir = args[-1].strip('"\'')
-
             unpack(doc_file, target_dir)
             sys.exit(0)
 
         if len(sys.argv) > 1 and sys.argv[1] == ".":
             project_path = os.getcwd()
         elif len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
-            if sys.argv[1] not in ["unpack", "open", "conf", "reset", "redo", "update", "uninstall"]:
+            if sys.argv[1] not in ["unpack", "open", "conf", "reset", "redo", "update", "uninstall",
+                                   "version"]:
                 potential_path = sys.argv[1]
                 if not os.path.exists(potential_path):
                     print(color_text(f"Error: Path '{potential_path}' does not exist!", 'error'))
@@ -203,7 +218,7 @@ def parse_args():
                     sys.exit(1)
                 project_path = os.path.abspath(potential_path)
 
-    return project_path
+    return project_path, lang
 
 
 def unpack(doc_file: str, target_dir: str):
