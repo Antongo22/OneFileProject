@@ -3,7 +3,7 @@ import sys
 import json
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Tuple, Optional
 import fnmatch
 from colorama import init, Fore, Style
 import signal
@@ -101,6 +101,7 @@ DEFAULT_CONFIG = {
                      '*.ico', '*.icns', '*.jar', '*.war'
                      ],
     'ignore_paths': [],
+    'whitelist_paths': [],
     'show_hidden': False
 }
 
@@ -466,7 +467,7 @@ def get_config_path():
     return Path(CONFIG_FILE)
 
 
-def load_config() -> Dict:
+def load_config() -> dict:
     """Загружает конфигурацию из файла в папке проекта"""
     try:
         local_config_path = Path(CONFIG_FILE)
@@ -497,7 +498,7 @@ def load_config() -> Dict:
         return DEFAULT_CONFIG.copy()
 
 
-def save_config(config: Dict):
+def save_config(config: dict):
     """Сохраняет конфигурацию в файл в папке проекта"""
     try:
         if not config.get('project_path'):
@@ -527,26 +528,49 @@ def get_input(prompt: str, default: Optional[str] = None) -> str:
     return user_input if user_input else default
 
 
-def should_ignore(path: str, rel_path: str, config: Dict) -> bool:
-    """Проверяет нужно ли игнорировать файл/папку"""
+def should_ignore(path: str, rel_path: str, config: dict) -> bool:
+    """Проверяет, нужно ли игнорировать файл/папку с учетом белого списка папок"""
     name = os.path.basename(path)
     rel_path = rel_path.replace('\\', '/')
+    is_dir = os.path.isdir(path)
+
+    # 1. Проверка белого списка папок/файлов (если он не пустой)
+    if config.get('whitelist_paths') and config['whitelist_paths']:
+        whitelist_match = False
+
+        for pattern in config['whitelist_paths']:
+            norm_pattern = pattern.replace('\\', '/').rstrip('/') + '/'
+
+            if rel_path.startswith(norm_pattern) or norm_pattern.startswith(rel_path + '/'):
+                whitelist_match = True
+                break
+
+
+        if not whitelist_match:
+            return True
+
 
     if not config['show_hidden'] and name.startswith('.'):
         return True
 
-    for ignore_path in config['ignore_paths']:
-        if fnmatch.fnmatch(rel_path, ignore_path):
+    for ignore_pattern in config['ignore_paths']:
+        if fnmatch.fnmatch(rel_path, ignore_pattern):
             return True
 
-    if os.path.isdir(path):
-        return any(ignore in rel_path.split('/') for ignore in config['ignore_folders'])
+    if is_dir:
+        return any(
+            ignored_folder in rel_path.split('/')
+            for ignored_folder in config['ignore_folders']
+        )
 
-    return any(fnmatch.fnmatch(name, pattern) for pattern in config['ignore_files'])
+    return any(
+        fnmatch.fnmatch(name, file_pattern)
+        for file_pattern in config['ignore_files']
+    )
 
 
-def generate_file_tree(root_path: str, config: Dict, current_path: str = None, prefix: str = '') -> Tuple[
-    str, List[Dict[str, str]]]:
+def generate_file_tree(root_path: str, config: dict, current_path: str = None, prefix: str = '') -> Tuple[
+    str, list[dict[str, str]]]:
     """Генерирует дерево файлов (чистый текст для файла)"""
     if current_path is None:
         current_path = root_path
@@ -621,7 +645,7 @@ def extract_code_blocks(content: str) -> str:
     return '\n'.join(result)
 
 
-def get_file_contents(files_info: List[Dict[str, str]]) -> str:
+def get_file_contents(files_info: list[dict[str, str]]) -> str:
     """Получает содержимое файлов (чистый текст для файла)"""
     contents = []
 
@@ -652,7 +676,7 @@ def get_file_contents(files_info: List[Dict[str, str]]) -> str:
     return '\n'.join(contents)
 
 
-def edit_config(config: Dict, cli_project_path: str = None) -> Dict:
+def edit_config(config: dict, cli_project_path: str = None) -> dict:
     """Интерактивное редактирование конфигурации"""
     if cli_project_path:
         project_path = os.path.abspath(cli_project_path)
@@ -674,6 +698,12 @@ def edit_config(config: Dict, cli_project_path: str = None) -> Dict:
 
     print(color_text("\nFilter settings:", 'highlight'))
     config['show_hidden'] = input(color_text("Show hidden files? (y/n) [n]: ", 'info')).lower() == 'y'
+
+    print(color_text("\nWhitelist settings:", 'highlight'))
+    print(color_text("Current whitelist paths (empty means all files):", 'info'), ', '.join(config.get('whitelist_paths', [])))
+    if input(color_text("Edit whitelist? (y/n) [n]: ", 'info')).lower() == 'y':
+        new_paths = input(color_text("Enter paths to include (comma separated, * for wildcard, relative to project): ", 'info'))
+        config['whitelist_paths'] = [p.strip() for p in new_paths.split(',') if p.strip()]
 
     print(color_text("\nIgnore settings:", 'highlight'))
     print(color_text("Current ignored folders:", 'info'), ', '.join(config['ignore_folders']))
