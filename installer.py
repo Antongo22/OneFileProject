@@ -33,14 +33,14 @@ def update():
         current_version = main.VERSION
 
         if not install_dir.exists():
-            print("❌ Программа не установлена. Сначала выполните установку.")
+            print("❌ The program is not installed. First, perform the installation.")
             return
 
         temp_dir = install_dir.parent / f"{PROGRAM_FILES_DIR}_temp"
         if temp_dir.exists():
             shutil.rmtree(temp_dir, onerror=handle_remove_readonly)
 
-        print(f"🔄 Клонируем репозиторий для обновления (текущая версия: {current_version})...")
+        print(f"🔄 Cloning the repository for updating (current version: {current_version})...")
         subprocess.run(["git", "clone", REPO_URL, temp_dir], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
         version_file = temp_dir / "version"
@@ -57,12 +57,12 @@ def update():
         shutil.rmtree(install_dir, onerror=handle_remove_readonly)
         shutil.move(temp_dir, install_dir)
 
-        print(f"✅ Программа успешно обновлена с {current_version} на {new_version}!")
+        print(f"✅ The program has been successfully updated from {current_version} to {new_version}!")
 
     except subprocess.CalledProcessError as e:
-        print(f"❌ Ошибка при выполнении git: {e.stderr.decode().strip()}")
+        print(f"❌ Error when executing git: {e.stderr.decode().strip()}")
     except Exception as e:
-        print(f"❌ Ошибка обновления: {str(e)}")
+        print(f"❌ Update error: {str(e)}")
     finally:
         if temp_dir and temp_dir.exists():
             try:
@@ -76,7 +76,7 @@ def install():
         install_dir = get_install_dir()
 
         install_dir.mkdir(parents=True, exist_ok=True)
-        print(f"🔄 Устанавливаю программу в: {install_dir}")
+        print(f"🔄 Installing the program in: {install_dir}")
 
         current_dir = Path(__file__).parent.resolve()
         for item in current_dir.iterdir():
@@ -103,24 +103,24 @@ def install():
             os.symlink(install_dir / "main.py", target_path)
             os.chmod(install_dir / "main.py", 0o755)
 
-        print(f"\n✅ Установка завершена! Теперь используйте команду '{PROGRAM_NAME}'")
+        print(f"\n✅ The installation is complete! Now use the command '{PROGRAM_NAME}'")
 
         if sys.platform == "win32":
-            print("\n⚠️ Для работы команды из любого места:")
-            print(f"1. Нажмите Win+R, введите 'sysdm.cpl' и нажмите Enter")
-            print("2. Перейдите на вкладку 'Дополнительно'")
-            print("3. Нажмите 'Переменные среды'")
-            print(f"4. В разделе 'Системные переменные' найдите 'Path' и нажмите 'Изменить'")
-            print(f"5. Добавьте новый путь: {bin_path}")
+            print("\n⚠️ For a team to work from anywhere:")
+            print(f"1. Press Win+R, type 'sysdm.cpl' and press Enter")
+            print("2. Go to the 'Advanced' tab")
+            print("3. Click on 'Environment Variables'")
+            print(f"4. In the 'System Variables' section, find the 'Path' and click 'Edit'")
+            print(f"5. Add a new path: {bin_path}")
         else:
             path_str = os.environ.get('PATH', '')
             if str(bin_path) not in path_str:
-                print("\n⚠️ Добавьте в ~/.bashrc или ~/.zshrc:")
+                print("\n⚠️ Add it to ~/.bashrc or ~/.zshrc:")
                 print(f'export PATH="$PATH:{bin_path}"')
-                print("И выполните: source ~/.bashrc")
+                print("And run: source ~/.bashrc")
 
     except Exception as e:
-        print(f"\n❌ Ошибка установки: {e}")
+        print(f"\n❌ Installation error: {e}")
         sys.exit(1)
 
 
@@ -132,7 +132,7 @@ def uninstall():
 
         if install_dir.exists():
             shutil.rmtree(install_dir)
-            print(f"✅ Удалена директория: {install_dir}")
+            print(f"✅ Deleted directory: {install_dir}")
 
         if sys.platform == "win32":
             target_path = Path.home() / "AppData" / "Local" / "Microsoft" / "WindowsApps" / f"{PROGRAM_NAME}.bat"
@@ -141,10 +141,10 @@ def uninstall():
 
         if target_path.exists():
             target_path.unlink()
-            print(f"✅ Удалена команда: {PROGRAM_NAME}")
+            print(f"✅ The command was deleted: {PROGRAM_NAME}")
 
     except Exception as e:
-        print(f"❌ Ошибка удаления: {e}")
+        print(f"❌ Deletion error: {e}")
         sys.exit(1)
 
 
@@ -155,6 +155,6 @@ if __name__ == "__main__":
         elif sys.argv[1] == "update":
             update()
         else:
-            print("❌ Неизвестная команда. Доступные команды: install, uninstall, update")
+            print("❌ Unknown team. Available commands: install, uninstall, update")
     else:
         install()
