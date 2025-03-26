@@ -416,26 +416,39 @@ def reset_output():
 def redo_documentation():
     """Повторно генерирует документацию с проверкой latest_paths.json"""
     config_path = get_config_path()
+    config = None
 
-    if not config_path.exists():
+    if config_path.exists():
+        try:
+            config = load_config()
+        except Exception as e:
+            print(color_text(f"Error loading config: {str(e)}", 'error'))
+
+    if config is None:
         latest_paths = load_latest_paths()
         if latest_paths.get('config_path'):
-            config_path = Path(latest_paths['config_path'])
-            print(color_text(f"Using config from latest paths: {config_path}", 'info'))
+            alt_config_path = Path(latest_paths['config_path'])
+            if alt_config_path.exists() and alt_config_path != config_path:
+                print(color_text(f"Trying config from latest paths: {alt_config_path}", 'info'))
+                try:
+                    config = load_config()
+                    config_path = alt_config_path
+                except Exception as e:
+                    print(color_text(f"Error loading config from latest paths: {str(e)}", 'error'))
 
-    if not config_path.exists():
-        print(color_text("Error: Config file does not exist. Run the program without 'redo' first.", 'error'))
+    if config is None:
+        print(color_text("Error: No valid config file found", 'error'))
         return
 
-    try:
-        config = load_config()
-        if not config['project_path']:
-            print(color_text("Error: Project path is not set in config", 'error'))
-            return
+    if not config.get('project_path'):
+        config['project_path'] = str(config_path.parent)
+        print(color_text(f"Using parent directory of config file as project path: {config['project_path']}", 'info'))
 
+    try:
         root_path = os.path.normpath(config['project_path'])
         root_name = os.path.basename(root_path)
 
+        print(color_text("\nScanning project structure...", 'info'))
         print(color_text("\nScanning project structure...", 'info'))
         tree, files = generate_file_tree(root_path, config)
 
@@ -446,9 +459,8 @@ def redo_documentation():
             f"# Files Content\n\n{get_file_contents(files)}"
         )
 
-        # Определяем output_path с проверкой latest_paths
         output_path = Path(config['output_path'])
-        if not output_path.exists():
+        if not output_path.parent.exists():
             latest_paths = load_latest_paths()
             if latest_paths.get('output_path'):
                 output_path = Path(latest_paths['output_path'])
@@ -459,8 +471,6 @@ def redo_documentation():
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(md_content)
 
-        # Обновляем latest_paths.json
-        save_latest_paths(str(config_path), str(output_path))
 
         print(color_text("\nDocumentation regenerated successfully!", 'success'))
         print(color_text(f"Output file: {output_path}", 'path'))
