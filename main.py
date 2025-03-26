@@ -228,12 +228,15 @@ def parse_args():
             target_dir = args[-1].strip('"\'')
             unpack(doc_file, target_dir)
             sys.exit(0)
+        elif "pwd" in sys.argv[1:]:
+            print(color_text(f"Current working directory: {os.getcwd()}", 'info'))
+            sys.exit(0)
 
         if len(sys.argv) > 1 and sys.argv[1] == ".":
             project_path = os.getcwd()
         elif len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
             if sys.argv[1] not in ["unpack", "open", "conf", "reset", "redo", "update", "uninstall",
-                                   "version", "info"]:
+                                   "version", "info", "pwd"]:
                 potential_path = sys.argv[1]
                 if not os.path.exists(potential_path):
                     print(color_text(f"Error: Path '{potential_path}' does not exist!", 'error'))
