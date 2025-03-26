@@ -3,7 +3,7 @@ import sys
 import json
 import subprocess
 from pathlib import Path
-from typing import Tuple, Optional
+from typing import Dict, List, Tuple, Optional
 import fnmatch
 from colorama import init, Fore, Style
 import signal
@@ -15,6 +15,7 @@ init(autoreset=True)
 
 PROGRAM_NAME = "ofp"
 CONFIG_FILE = "project_documenter_config.json"
+LATEST_PATHS_FILE = str(Path(__file__).parent / "latest_paths.json")
 
 
 def get_version():
@@ -84,26 +85,54 @@ DEFAULT_CONFIG = {
     'output_path': 'project_documentation.md',
     'ignore_folders': ['.git', '__pycache__', 'node_modules', 'venv'],
     'ignore_files': [
-                    '.gitignore', '.env', CONFIG_FILE, '*.md',
-                     # Изображения
-                     '*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp', '*.tiff', '*.svg',
-                     # Видео/аудио
-                     '*.mp3', '*.mp4', '*.avi', '*.mov', '*.wav',
-                     # Архивы
-                     '*.zip', '*.tar', '*.gz', '*.rar', '*.7z',
-                     # Документы
-                     '*.pdf', '*.doc', '*.docx', '*.xls', '*.xlsx', '*.ppt', '*.pptx',
-                     # Бинарные файлы
-                     '*.exe', '*.dll', '*.so', '*.bin',
-                     # Файлы IDE
-                     '*.iml', '*.swp', '*.swo',
-                     # Прочие
-                     '*.ico', '*.icns', '*.jar', '*.war'
-                     ],
+        '.gitignore', '.env', CONFIG_FILE, '*.md',
+        '*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp', '*.tiff', '*.svg',
+        '*.mp3', '*.mp4', '*.avi', '*.mov', '*.wav',
+        '*.zip', '*.tar', '*.gz', '*.rar', '*.7z',
+        '*.pdf', '*.doc', '*.docx', '*.xls', '*.xlsx', '*.ppt', '*.pptx',
+        '*.exe', '*.dll', '*.so', '*.bin',
+        '*.iml', '*.swp', '*.swo',
+        '*.ico', '*.icns', '*.jar', '*.war'
+    ],
     'ignore_paths': [],
     'whitelist_paths': [],
     'show_hidden': False
 }
+
+
+def save_latest_paths(output_path: str):
+    """Сохраняет пути к последним использованным файлам"""
+    output_dir = Path(output_path).parent
+
+    config_in_output_dir = str(output_dir / "project_documenter_config.json")
+
+    latest_paths = {
+        'config_path': config_in_output_dir,
+        'output_path': output_path
+    }
+
+    print(f"Saving latest paths: {latest_paths}")
+
+    try:
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        with open(LATEST_PATHS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(latest_paths, f, indent=2)
+
+    except Exception as e:
+        print(color_text(f"Error saving latest paths: {str(e)}", 'error'))
+
+
+def load_latest_paths() -> Dict:
+    """Загружает последние использованные пути из директории программы"""
+    try:
+        if os.path.exists(LATEST_PATHS_FILE):
+            with open(LATEST_PATHS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {}
+    except Exception as e:
+        print(color_text(f"Error loading latest paths: {str(e)}", 'error'))
+        return {}
 
 
 def handle_ctrl_c(signum, frame):
@@ -119,42 +148,21 @@ def print_help(lang='en'):
     """Выводит информацию о доступных командах и флагах из JSON-файлов"""
     try:
         help_file = Path(__file__).parent / 'help_texts' / f'{lang}.json'
-
         if not help_file.exists():
-            print(color_text(f"\nError: Help file for language '{lang}' not found\n", 'error'))
             help_file = Path(__file__).parent / 'help_texts' / 'en.json'
-            if not help_file.exists():
-                print(color_text("\nError: Default help file not found\n", 'error'))
-                return
-
         with open(help_file, 'r', encoding='utf-8') as f:
             texts = json.load(f)
-
         help_text = f"""
 {color_text(texts['title'], 'highlight')}
-
 {color_text(texts['usage'], 'info')}
     {PROGRAM_NAME} [command] [options]
-
 {color_text(texts['commands'], 'info')}"""
-
         for cmd, desc in texts['commands_list']:
             help_text += f"\n    {color_text(cmd, 'path')}{' ' * (20 - len(cmd))}{desc}"
-
-        help_text += f"\n\n{color_text(texts['reset_opts'], 'info')}"
-
-        for opt, desc in texts['options_list']:
-            help_text += f"\n    {color_text(opt, 'path')}{' ' * (20 - len(opt))}{desc}"
-
         help_text += f"\n\n{color_text(texts['examples'], 'info')}"
-
         for ex, desc in texts['examples_list']:
             help_text += f"\n    {ex}{' ' * (30 - len(ex))}{desc}"
-
-        help_text = f"\n{help_text}\n"
-
-        print(help_text)
-
+        print(f"\n{help_text}\n")
     except Exception as e:
         print(color_text(f"\nError loading help: {str(e)}\n", 'error'))
 
@@ -215,7 +223,6 @@ def parse_args():
                 print(color_text("Error: unpack requires 2 arguments - the documentation file and the target folder",
                                  'error'))
                 sys.exit(1)
-
             args = sys.argv[2:]
             doc_file = ' '.join(args[:-1]).strip('"\'')
             target_dir = args[-1].strip('"\'')
@@ -240,7 +247,7 @@ def parse_args():
 
 
 def unpack(doc_file: str, target_dir: str):
-    """Распаковывает проект из файла документации, пропуская уже существующие папки"""
+    """Распаковывает проект из файла документации"""
     try:
         doc_path = Path(doc_file.strip('"\''))
         target_path = Path(target_dir.strip('"\''))
@@ -288,22 +295,14 @@ def unpack(doc_file: str, target_dir: str):
 
             try:
                 file_path = target_path / rel_path
-
-                if file_path.exists() and file_path.is_dir():
-                    continue
-
                 file_path.parent.mkdir(parents=True, exist_ok=True)
-
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(file_content)
-
             except Exception as e:
                 print(color_text(f"⚠️ Failed to create {rel_path} file: {str(e)}", 'warning'))
-                continue
 
         print(color_text(f"✅ The project has been successfully unpacked in: {target_path}", 'success'))
         return True
-
     except Exception as e:
         print(color_text(f"❌ Unpacking error: {str(e)}", 'error'))
         return False
@@ -312,13 +311,22 @@ def unpack(doc_file: str, target_dir: str):
 def open_output_file():
     """Открывает выходной файл в приложении по умолчанию"""
     config = load_config()
-    if not config['output_path']:
-        print(color_text("Error: Output path is not set in config", 'error'))
-        return
+    output_path = None
 
-    output_path = Path(config['output_path'])
-    if not output_path.exists():
-        print(color_text(f"Error: Output file {output_path} does not exist", 'error'))
+    if config.get('output_path'):
+        output_path = Path(config['output_path'])
+        if not output_path.exists():
+            output_path = None
+
+    if output_path is None:
+        latest_paths = load_latest_paths()
+        if latest_paths.get('output_path'):
+            output_path = Path(latest_paths['output_path'])
+            if not output_path.exists():
+                output_path = None
+
+    if output_path is None:
+        print(color_text("Error: Output file not found in config or latest paths", 'error'))
         return
 
     try:
@@ -337,8 +345,12 @@ def open_config_file():
     """Открывает файл конфигурации в приложении по умолчанию"""
     config_path = get_config_path()
     if not config_path.exists():
-        print(color_text("Error: Config file does not exist", 'error'))
-        return
+        latest_paths = load_latest_paths()
+        if latest_paths.get('config_path'):
+            config_path = Path(latest_paths['config_path'])
+            if not config_path.exists():
+                print(color_text("Error: Config file not found in standard or latest paths", 'error'))
+                return
 
     try:
         if sys.platform == 'win32':
@@ -398,7 +410,7 @@ def reset_output():
 
 
 def redo_documentation():
-    """Повторно генерирует документацию без вопросов пользователя"""
+    """Повторно генерирует документацию"""
     config_path = get_config_path()
     if not config_path.exists():
         print(color_text("Error: Config file does not exist. Run the program without 'redo' first.", 'error'))
@@ -429,6 +441,7 @@ def redo_documentation():
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(md_content)
 
+        save_latest_paths(str(output_path))
         print(color_text("\nDocumentation regenerated successfully!", 'success'))
         print(color_text(f"Output file: {output_path}", 'path'))
         print(color_text(f"Total files processed: {len(files)}", 'info'))
@@ -459,47 +472,42 @@ def print_header():
     print(color_text("=" * 60, 'info') + "\n")
 
 
-def get_config_path():
-    """Возвращает путь к файлу конфигурации в папке проекта"""
-    config = load_config()
-    if config.get('project_path'):
+def get_config_path(config: Optional[Dict] = None) -> Path:
+    """Возвращает путь к файлу конфигурации"""
+    if config and config.get('project_path'):
         return Path(config['project_path']) / CONFIG_FILE
     return Path(CONFIG_FILE)
 
 
-def load_config() -> dict:
-    """Загружает конфигурацию из файла в папке проекта"""
+def load_config() -> Dict:
+    """Загружает конфигурацию без рекурсии"""
     try:
-        local_config_path = Path(CONFIG_FILE)
-        if local_config_path.exists():
-            with open(local_config_path, 'r', encoding='utf-8') as f:
+        config_path = Path(CONFIG_FILE)
+        if config_path.exists():
+            with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
                 if config.get('project_path'):
                     project_config_path = Path(config['project_path']) / CONFIG_FILE
                     if not project_config_path.exists():
+                        project_config_path.parent.mkdir(parents=True, exist_ok=True)
                         with open(project_config_path, 'w', encoding='utf-8') as pf:
                             json.dump(config, pf, indent=2)
-                        local_config_path.unlink()
+                        config_path.unlink()
                 return {**DEFAULT_CONFIG, **config}
 
-        config_path = get_config_path()
-        if config_path.exists():
-            with open(config_path, 'r', encoding='utf-8') as f:
+        project_config_path = Path(DEFAULT_CONFIG['project_path']) / CONFIG_FILE if DEFAULT_CONFIG['project_path'] else None
+        if project_config_path and project_config_path.exists():
+            with open(project_config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-                merged_config = {**DEFAULT_CONFIG, **config}
+                return {**DEFAULT_CONFIG, **config}
 
-                if 'ignore_paths' not in merged_config:
-                    merged_config['ignore_paths'] = []
-
-                return merged_config
         return DEFAULT_CONFIG.copy()
     except Exception as e:
         print(color_text(f"Error loading config: {str(e)}", 'error'))
         return DEFAULT_CONFIG.copy()
 
-
-def save_config(config: dict):
-    """Сохраняет конфигурацию в файл в папке проекта"""
+def save_config(config: Dict):
+    """Сохраняет конфигурацию в файл"""
     try:
         if not config.get('project_path'):
             print(color_text("Cannot save config: project path is not set", 'error'))
@@ -523,32 +531,24 @@ def get_input(prompt: str, default: Optional[str] = None) -> str:
         prompt = color_text(f"{prompt} [{default}]: ", 'info')
     else:
         prompt = color_text(f"{prompt}: ", 'info')
-
-    user_input = input(prompt).strip()
-    return user_input if user_input else default
+    return input(prompt).strip() or default
 
 
-def should_ignore(path: str, rel_path: str, config: dict) -> bool:
-    """Проверяет, нужно ли игнорировать файл/папку с учетом белого списка папок"""
+def should_ignore(path: str, rel_path: str, config: Dict) -> bool:
+    """Проверяет нужно ли игнорировать файл/папку"""
     name = os.path.basename(path)
     rel_path = rel_path.replace('\\', '/')
     is_dir = os.path.isdir(path)
 
-    # 1. Проверка белого списка папок/файлов (если он не пустой)
     if config.get('whitelist_paths') and config['whitelist_paths']:
-        whitelist_match = False
-
+        match_found = False
         for pattern in config['whitelist_paths']:
             norm_pattern = pattern.replace('\\', '/').rstrip('/') + '/'
-
             if rel_path.startswith(norm_pattern) or norm_pattern.startswith(rel_path + '/'):
-                whitelist_match = True
+                match_found = True
                 break
-
-
-        if not whitelist_match:
+        if not match_found:
             return True
-
 
     if not config['show_hidden'] and name.startswith('.'):
         return True
@@ -558,20 +558,14 @@ def should_ignore(path: str, rel_path: str, config: dict) -> bool:
             return True
 
     if is_dir:
-        return any(
-            ignored_folder in rel_path.split('/')
-            for ignored_folder in config['ignore_folders']
-        )
+        return any(ignore in rel_path.split('/') for ignore in config['ignore_folders'])
 
-    return any(
-        fnmatch.fnmatch(name, file_pattern)
-        for file_pattern in config['ignore_files']
-    )
+    return any(fnmatch.fnmatch(name, pattern) for pattern in config['ignore_files'])
 
 
-def generate_file_tree(root_path: str, config: dict, current_path: str = None, prefix: str = '') -> Tuple[
-    str, list[dict[str, str]]]:
-    """Генерирует дерево файлов (чистый текст для файла)"""
+def generate_file_tree(root_path: str, config: Dict, current_path: str = None, prefix: str = '') -> Tuple[
+    str, List[Dict[str, str]]]:
+    """Генерирует дерево файлов"""
     if current_path is None:
         current_path = root_path
 
@@ -593,10 +587,8 @@ def generate_file_tree(root_path: str, config: dict, current_path: str = None, p
 
         if os.path.isdir(full_path):
             tree.append(f"{prefix}{pointer}{name}/")
-            subtree, sub_files = generate_file_tree(
-                root_path, config, full_path,
-                prefix + ('│   ' if pointer == '├── ' else '    ')
-            )
+            subtree, sub_files = generate_file_tree(root_path, config, full_path,
+                                                    prefix + ('│   ' if pointer == '├── ' else '    '))
             tree.append(subtree)
             files_info.extend(sub_files)
         else:
@@ -645,15 +637,13 @@ def extract_code_blocks(content: str) -> str:
     return '\n'.join(result)
 
 
-def get_file_contents(files_info: list[dict[str, str]]) -> str:
-    """Получает содержимое файлов (чистый текст для файла)"""
+def get_file_contents(files_info: List[Dict[str, str]]) -> str:
+    """Получает содержимое файлов"""
     contents = []
-
     for file_info in files_info:
         try:
             with open(file_info['path'], 'r', encoding='utf-8') as f:
                 content = f.read()
-
                 if file_info['extension'] == '.md':
                     content = extract_code_blocks(content)
         except UnicodeDecodeError:
@@ -672,11 +662,10 @@ def get_file_contents(files_info: list[dict[str, str]]) -> str:
             f"```\n\n"
             f"---\n\n"
         )
-
     return '\n'.join(contents)
 
 
-def edit_config(config: dict, cli_project_path: str = None) -> dict:
+def edit_config(config: Dict, cli_project_path: str = None) -> Dict:
     """Интерактивное редактирование конфигурации"""
     if cli_project_path:
         project_path = os.path.abspath(cli_project_path)
@@ -700,9 +689,11 @@ def edit_config(config: dict, cli_project_path: str = None) -> dict:
     config['show_hidden'] = input(color_text("Show hidden files? (y/n) [n]: ", 'info')).lower() == 'y'
 
     print(color_text("\nWhitelist settings:", 'highlight'))
-    print(color_text("Current whitelist paths (empty means all files):", 'info'), ', '.join(config.get('whitelist_paths', [])))
-    if input(color_text("Edit whitelist? (y/n) [n]: ", 'info')).lower() == 'y':
-        new_paths = input(color_text("Enter paths to include (comma separated, * for wildcard, relative to project): ", 'info'))
+    print(color_text("Current whitelist paths (empty means all files):", 'info'),
+          ', '.join(config.get('whitelist_paths', [])))
+    if input(color_text("Edit? (y/n) [n]: ", 'info')).lower() == 'y':
+        new_paths = input(
+            color_text("Enter paths to include (comma separated, * for wildcard, relative to project): ", 'info'))
         config['whitelist_paths'] = [p.strip() for p in new_paths.split(',') if p.strip()]
 
     print(color_text("\nIgnore settings:", 'highlight'))
@@ -725,8 +716,8 @@ def edit_config(config: dict, cli_project_path: str = None) -> dict:
 
 
 def main():
-    cli_project_path = parse_args()
 
+    cli_project_path = parse_args()
     print_header()
 
     config = load_config()
@@ -761,6 +752,7 @@ def main():
             f.write(md_content)
 
         save_config(config)
+        save_latest_paths(str(output_path))
 
         print(color_text("\nDocumentation generated successfully!", 'success'))
         print(color_text(f"Output file: {output_path}", 'path'))

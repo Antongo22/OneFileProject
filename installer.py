@@ -80,7 +80,7 @@ def install():
 
         current_dir = Path(__file__).parent.resolve()
         for item in current_dir.iterdir():
-            if item.name not in ['.git', '__pycache__', 'venv']:
+            if item.name not in ['.git', '__pycache__', '.venv', ".idea"]:
                 dest = install_dir / item.name
                 if item.is_dir():
                     shutil.copytree(item, dest, dirs_exist_ok=True)
