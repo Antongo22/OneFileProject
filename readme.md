@@ -30,7 +30,9 @@ git clone https://github.com/Antongo22/OneFileProject
 pip install colorama  
 cd OneFileProject  
 python installer.py  # Установка с созданием команды ofp
-```  
+```
+❗️ Эту папку можно удалять, тк программа уже установилась.
+
 
 После установки можно использовать команду `ofp` из любой директории!
 
