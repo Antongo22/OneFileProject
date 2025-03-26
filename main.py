@@ -155,6 +155,16 @@ def print_help(lang='en'):
         print(color_text(f"\nError loading help: {str(e)}\n", 'error'))
 
 
+def print_project_info():
+    """Выводит информацию о проекте с цветным оформлением"""
+    info_text = f"""
+{color_text("Project Information:", 'info')}
+{color_text("Author:", 'info')} {color_text("Your Name", 'highlight')}
+{color_text("Repository:", 'info')} {color_text("https://github.com/yourusername/yourproject", 'highlight')}
+{color_text("Version:", 'info')} {color_text(VERSION, 'highlight')}
+"""
+    print(info_text)
+
 def parse_args():
     """Разбирает аргументы командной строки с проверкой существования папки"""
     lang = 'en'
@@ -192,6 +202,9 @@ def parse_args():
         elif "version" in sys.argv[1:]:
             print(f"Current version: {color_text(VERSION, 'highlight')}")
             sys.exit(0)
+        elif "info" in sys.argv[1:]:
+            print_project_info()
+            sys.exit(0)
         elif "unpack" in sys.argv[1:]:
             if len(sys.argv) < 4:
                 print(color_text("Error: unpack requires 2 arguments - the documentation file and the target folder",
@@ -208,7 +221,7 @@ def parse_args():
             project_path = os.getcwd()
         elif len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
             if sys.argv[1] not in ["unpack", "open", "conf", "reset", "redo", "update", "uninstall",
-                                   "version"]:
+                                   "version", "info"]:
                 potential_path = sys.argv[1]
                 if not os.path.exists(potential_path):
                     print(color_text(f"Error: Path '{potential_path}' does not exist!", 'error'))
@@ -219,6 +232,17 @@ def parse_args():
                 project_path = os.path.abspath(potential_path)
 
     return project_path
+
+
+def print_project_info():
+    """Выводит информацию о проекте с цветным оформлением"""
+    info_text = f"""
+{color_text("Project Information:", 'info')}
+{color_text("Author:", 'info')} {color_text("Anton Aleynichenko - https://aleynichenko.ru", 'highlight')}
+{color_text("Repository:", 'info')} {color_text("https://github.com/Antongo22/OneFileProject", 'highlight')}
+{color_text("Version:", 'info')} {color_text(VERSION, 'highlight')}
+"""
+    print(info_text)
 
 
 def unpack(doc_file: str, target_dir: str):
