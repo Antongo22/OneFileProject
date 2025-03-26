@@ -16,6 +16,7 @@ init(autoreset=True)
 PROGRAM_NAME = "ofp"
 CONFIG_FILE = "project_documenter_config.json"
 
+
 def get_version():
     """Получает версию из файла version или возвращает v0.0.0 при ошибке"""
     try:
@@ -26,6 +27,7 @@ def get_version():
             return version.split()[0] if version else "v/././"
     except:
         return "v0.0.0"
+
 
 VERSION = get_version()
 
@@ -79,9 +81,10 @@ LANGUAGE_MAPPING = {
 
 DEFAULT_CONFIG = {
     'project_path': '',
-    'output_path': 'documentation.md',
+    'output_path': 'project_documentation.md',
     'ignore_folders': ['.git', '__pycache__', 'node_modules', 'venv'],
-    'ignore_files': ['.gitignore', '.env', CONFIG_FILE,
+    'ignore_files': [
+                    '.gitignore', '.env', CONFIG_FILE, '*.md',
                      # Изображения
                      '*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp', '*.tiff', '*.svg',
                      # Видео/аудио
@@ -159,11 +162,12 @@ def print_project_info():
     """Выводит информацию о проекте с цветным оформлением"""
     info_text = f"""
 {color_text("Project Information:", 'info')}
-{color_text("Author:", 'info')} {color_text("Your Name", 'highlight')}
-{color_text("Repository:", 'info')} {color_text("https://github.com/yourusername/yourproject", 'highlight')}
+{color_text("Author:", 'info')} {color_text("Anton Aleynichenko - https://aleynichenko.ru", 'highlight')}
+{color_text("Repository:", 'info')} {color_text("https://github.com/Antongo22/OneFileProject", 'highlight')}
 {color_text("Version:", 'info')} {color_text(VERSION, 'highlight')}
 """
     print(info_text)
+
 
 def parse_args():
     """Разбирает аргументы командной строки с проверкой существования папки"""
@@ -232,17 +236,6 @@ def parse_args():
                 project_path = os.path.abspath(potential_path)
 
     return project_path
-
-
-def print_project_info():
-    """Выводит информацию о проекте с цветным оформлением"""
-    info_text = f"""
-{color_text("Project Information:", 'info')}
-{color_text("Author:", 'info')} {color_text("Anton Aleynichenko - https://aleynichenko.ru", 'highlight')}
-{color_text("Repository:", 'info')} {color_text("https://github.com/Antongo22/OneFileProject", 'highlight')}
-{color_text("Version:", 'info')} {color_text(VERSION, 'highlight')}
-"""
-    print(info_text)
 
 
 def unpack(doc_file: str, target_dir: str):
@@ -341,7 +334,7 @@ def open_output_file():
 
 def open_config_file():
     """Открывает файл конфигурации в приложении по умолчанию"""
-    config_path = Path(CONFIG_FILE)
+    config_path = get_config_path()
     if not config_path.exists():
         print(color_text("Error: Config file does not exist", 'error'))
         return
@@ -375,8 +368,9 @@ def handle_reset_command():
 def reset_config():
     """Сбрасывает конфигурацию"""
     try:
-        if os.path.exists(CONFIG_FILE):
-            os.remove(CONFIG_FILE)
+        config_path = get_config_path()
+        if config_path.exists():
+            config_path.unlink()
             print(color_text("Config file has been reset", 'success'))
         else:
             print(color_text("Config file does not exist", 'warning'))
@@ -404,7 +398,8 @@ def reset_output():
 
 def redo_documentation():
     """Повторно генерирует документацию без вопросов пользователя"""
-    if not os.path.exists(CONFIG_FILE):
+    config_path = get_config_path()
+    if not config_path.exists():
         print(color_text("Error: Config file does not exist. Run the program without 'redo' first.", 'error'))
         return
 
@@ -463,11 +458,32 @@ def print_header():
     print(color_text("=" * 60, 'info') + "\n")
 
 
+def get_config_path():
+    """Возвращает путь к файлу конфигурации в папке проекта"""
+    config = load_config()
+    if config.get('project_path'):
+        return Path(config['project_path']) / CONFIG_FILE
+    return Path(CONFIG_FILE)
+
+
 def load_config() -> Dict:
-    """Загружает конфигурацию из файла"""
+    """Загружает конфигурацию из файла в папке проекта"""
     try:
-        if os.path.exists(CONFIG_FILE):
-            with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+        local_config_path = Path(CONFIG_FILE)
+        if local_config_path.exists():
+            with open(local_config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                if config.get('project_path'):
+                    project_config_path = Path(config['project_path']) / CONFIG_FILE
+                    if not project_config_path.exists():
+                        with open(project_config_path, 'w', encoding='utf-8') as pf:
+                            json.dump(config, pf, indent=2)
+                        local_config_path.unlink()
+                return {**DEFAULT_CONFIG, **config}
+
+        config_path = get_config_path()
+        if config_path.exists():
+            with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
                 merged_config = {**DEFAULT_CONFIG, **config}
 
@@ -482,11 +498,20 @@ def load_config() -> Dict:
 
 
 def save_config(config: Dict):
-    """Сохраняет конфигурацию в файл"""
+    """Сохраняет конфигурацию в файл в папке проекта"""
     try:
-        with open(CONFIG_FILE, 'w', encoding='utf-8') as f:
+        if not config.get('project_path'):
+            print(color_text("Cannot save config: project path is not set", 'error'))
+            return
+
+        output_file = Path(config['output_path']).name
+        if output_file not in config['ignore_files']:
+            config['ignore_files'].append(output_file)
+
+        config_path = Path(config['project_path']) / CONFIG_FILE
+        with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2)
-        print(color_text("Configuration saved successfully", 'success'))
+        print(color_text(f"Configuration saved successfully in {config_path}", 'success'))
     except Exception as e:
         print(color_text(f"Error saving config: {str(e)}", 'error'))
 
@@ -630,8 +655,10 @@ def get_file_contents(files_info: List[Dict[str, str]]) -> str:
 def edit_config(config: Dict, cli_project_path: str = None) -> Dict:
     """Интерактивное редактирование конфигурации"""
     if cli_project_path:
-        config['project_path'] = cli_project_path
-        config['output_path'] = str(Path(cli_project_path).parent / "project_documentation.md")
+        project_path = os.path.abspath(cli_project_path)
+        config['project_path'] = project_path
+        if config['output_path'] == DEFAULT_CONFIG['output_path']:
+            config['output_path'] = str(Path(project_path) / "project_documentation.md")
         return config
 
     print(color_text("\nCurrent configuration:", 'highlight'))
@@ -639,6 +666,10 @@ def edit_config(config: Dict, cli_project_path: str = None) -> Dict:
 
     print(color_text("\nEdit configuration:", 'highlight'))
     config['project_path'] = get_input("Project path", config['project_path'])
+
+    if config['project_path'] and config['output_path'] == DEFAULT_CONFIG['output_path']:
+        config['output_path'] = str(Path(config['project_path']) / "project_documentation.md")
+
     config['output_path'] = get_input("Output file path", config['output_path'])
 
     print(color_text("\nFilter settings:", 'highlight'))
