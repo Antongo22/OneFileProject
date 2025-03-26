@@ -229,7 +229,8 @@ def parse_args():
             unpack(doc_file, target_dir)
             sys.exit(0)
         elif "pwd" in sys.argv[1:]:
-            print(color_text(f"Current working directory: {os.getcwd()}", 'info'))
+
+            print(color_text(f"Current working directory: {Path(__file__).parent}", 'info'))
             sys.exit(0)
 
         if len(sys.argv) > 1 and sys.argv[1] == ".":
@@ -413,18 +414,25 @@ def reset_output():
 
 
 def redo_documentation():
-    """Повторно генерирует документацию"""
+    """Повторно генерирует документацию с проверкой latest_paths.json"""
     config_path = get_config_path()
+
+    if not config_path.exists():
+        latest_paths = load_latest_paths()
+        if latest_paths.get('config_path'):
+            config_path = Path(latest_paths['config_path'])
+            print(color_text(f"Using config from latest paths: {config_path}", 'info'))
+
     if not config_path.exists():
         print(color_text("Error: Config file does not exist. Run the program without 'redo' first.", 'error'))
         return
 
-    config = load_config()
-    if not config['project_path']:
-        print(color_text("Error: Project path is not set in config", 'error'))
-        return
-
     try:
+        config = load_config()
+        if not config['project_path']:
+            print(color_text("Error: Project path is not set in config", 'error'))
+            return
+
         root_path = os.path.normpath(config['project_path'])
         root_name = os.path.basename(root_path)
 
@@ -438,13 +446,22 @@ def redo_documentation():
             f"# Files Content\n\n{get_file_contents(files)}"
         )
 
+        # Определяем output_path с проверкой latest_paths
         output_path = Path(config['output_path'])
+        if not output_path.exists():
+            latest_paths = load_latest_paths()
+            if latest_paths.get('output_path'):
+                output_path = Path(latest_paths['output_path'])
+                print(color_text(f"Using output path from latest paths: {output_path}", 'info'))
+
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(md_content)
 
-        save_latest_paths(str(output_path))
+        # Обновляем latest_paths.json
+        save_latest_paths(str(config_path), str(output_path))
+
         print(color_text("\nDocumentation regenerated successfully!", 'success'))
         print(color_text(f"Output file: {output_path}", 'path'))
         print(color_text(f"Total files processed: {len(files)}", 'info'))
