@@ -218,7 +218,7 @@ def parse_args():
                     sys.exit(1)
                 project_path = os.path.abspath(potential_path)
 
-    return project_path, lang
+    return project_path
 
 
 def unpack(doc_file: str, target_dir: str):
