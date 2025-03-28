@@ -4,8 +4,8 @@ import shutil
 import subprocess
 import stat
 from pathlib import Path
+import program.config_utils as cfg
 
-import main
 
 PROGRAM_NAME = "ofp"
 PROGRAM_FILES_DIR = "OFP_Documenter"
@@ -30,7 +30,7 @@ def update():
     temp_dir = None
     try:
         install_dir = get_install_dir()
-        current_version = main.VERSION
+        current_version = cfg.VERSION
 
         if not install_dir.exists():
             print("❌ The program is not installed. First, perform the installation.")
