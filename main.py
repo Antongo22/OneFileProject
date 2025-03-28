@@ -1,16 +1,13 @@
 import os
 import sys
-import json
-import subprocess
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
-import fnmatch
-from colorama import init, Fore, Style
+from colorama import init
 import signal
 import re
 import program.config_utils as cfg
 import installer
-from program.utils import *
+import program.utils as utils
+import program.commands as commands
 
 init(autoreset=True)
 
@@ -19,45 +16,12 @@ init(autoreset=True)
 
 def handle_ctrl_c(signum, frame):
     """Обработка нажатия Ctrl+C"""
-    print(color_text("\n\nOperation cancelled by user", 'warning'))
+    print(utils.color_text("\n\nOperation cancelled by user", 'warning'))
     sys.exit(1)
 
 
 signal.signal(signal.SIGINT, handle_ctrl_c)
 
-
-def print_help(lang='en'):
-    """Выводит информацию о доступных командах и флагах из JSON-файлов"""
-    try:
-        help_file = Path(__file__).parent / 'help_texts' / f'{lang}.json'
-        if not help_file.exists():
-            help_file = Path(__file__).parent / 'help_texts' / 'en.json'
-        with open(help_file, 'r', encoding='utf-8') as f:
-            texts = json.load(f)
-        help_text = f"""
-{color_text(texts['title'], 'highlight')}
-{color_text(texts['usage'], 'info')}
-    {cfg.PROGRAM_NAME} [command] [options]
-{color_text(texts['commands'], 'info')}"""
-        for cmd, desc in texts['commands_list']:
-            help_text += f"\n    {color_text(cmd, 'path')}{' ' * (20 - len(cmd))}{desc}"
-        help_text += f"\n\n{color_text(texts['examples'], 'info')}"
-        for ex, desc in texts['examples_list']:
-            help_text += f"\n    {ex}{' ' * (30 - len(ex))}{desc}"
-        print(f"\n{help_text}\n")
-    except Exception as e:
-        print(color_text(f"\nError loading help: {str(e)}\n", 'error'))
-
-
-def print_project_info():
-    """Выводит информацию о проекте с цветным оформлением"""
-    info_text = f"""
-{color_text("Project Information:", 'info')}
-{color_text("Author:", 'info')} {color_text("Anton Aleynichenko - https://aleynichenko.ru", 'highlight')}
-{color_text("Repository:", 'info')} {color_text("https://github.com/Antongo22/OneFileProject", 'highlight')}
-{color_text("Version:", 'info')} {color_text(cfg.VERSION, 'highlight')}
-"""
-    print(info_text)
 
 
 def parse_args():
@@ -74,7 +38,7 @@ def parse_args():
             sys.argv.remove('-en')
 
         if any(x in sys.argv[1:] for x in ("-h", "--help", "help", "помощь")):
-            print_help(lang)
+            commands.print_help(lang)
             sys.exit(0)
         elif "uninstall" in sys.argv[1:]:
             installer.uninstall()
@@ -83,36 +47,36 @@ def parse_args():
             installer.update()
             sys.exit(0)
         elif "open" in sys.argv[1:]:
-            open_output_file()
+            commands.open_output_file()
             sys.exit(0)
         elif "conf" in sys.argv[1:]:
-            open_config_file()
+            commands.open_config_file()
             sys.exit(0)
         elif "reset" in sys.argv[1:]:
-            handle_reset_command()
+            commands.handle_reset_command()
             sys.exit(0)
         elif "redo" in sys.argv[1:]:
-            redo_documentation()
+            commands.redo_documentation()
             sys.exit(0)
         elif "version" in sys.argv[1:]:
-            print(f"Current version: {color_text(cfg.VERSION, 'highlight')}")
+            print(f"Current version: {utils.color_text(cfg.VERSION, 'highlight')}")
             sys.exit(0)
         elif "info" in sys.argv[1:]:
-            print_project_info()
+            commands.print_project_info()
             sys.exit(0)
         elif "unpack" in sys.argv[1:]:
             if len(sys.argv) < 4:
-                print(color_text("Error: unpack requires 2 arguments - the documentation file and the target folder",
+                print(utils.color_text("Error: unpack requires 2 arguments - the documentation file and the target folder",
                                  'error'))
                 sys.exit(1)
             args = sys.argv[2:]
             doc_file = ' '.join(args[:-1]).strip('"\'')
             target_dir = args[-1].strip('"\'')
-            unpack(doc_file, target_dir)
+            commands.unpack(doc_file, target_dir)
             sys.exit(0)
         elif "pwd" in sys.argv[1:]:
 
-            print(color_text(f"Current working directory: {Path(__file__).parent}", 'info'))
+            print(utils.color_text(f"Current working directory: {Path(__file__).parent}", 'info'))
             sys.exit(0)
 
         if len(sys.argv) > 1 and sys.argv[1] == ".":
@@ -122,480 +86,48 @@ def parse_args():
                                    "version", "info", "pwd"]:
                 potential_path = sys.argv[1]
                 if not os.path.exists(potential_path):
-                    print(color_text(f"Error: Path '{potential_path}' does not exist!", 'error'))
+                    print(utils.color_text(f"Error: Path '{potential_path}' does not exist!", 'error'))
                     sys.exit(1)
                 if not os.path.isdir(potential_path):
-                    print(color_text(f"Error: '{potential_path}' is not a directory!", 'error'))
+                    print(utils.color_text(f"Error: '{potential_path}' is not a directory!", 'error'))
                     sys.exit(1)
                 project_path = os.path.abspath(potential_path)
 
     return project_path
 
 
-def unpack(doc_file: str, target_dir: str):
-    """Распаковывает проект из файла документации"""
-    try:
-        doc_path = Path(doc_file.strip('"\''))
-        target_path = Path(target_dir.strip('"\''))
 
-        if not doc_path.exists():
-            print(color_text(f"Error: The documentation file '{doc_path}' was not found", 'error'))
-            return False
 
-        if target_path.exists() and any(target_path.iterdir()):
-            print(color_text(f"Error: The target directory '{target_path}' is not empty", 'error'))
-            return False
-
-        target_path.mkdir(parents=True, exist_ok=True)
-
-        with open(doc_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-
-        structure_match = re.search(
-            r'# (?:Структура проекта|Project Structure):.*?\n```.*?\n(.*?)\n```',
-            content,
-            re.DOTALL
-        )
-
-        if not structure_match:
-            print(color_text("Error: The section with the project structure was not found.", 'error'))
-            return False
-
-        first_line = structure_match.group(1).split('\n')[0].strip()
-        root_folder_name = first_line.split('/')[0].rstrip('\\/')
-
-        files_section = re.finditer(
-            r'## (.*?)\n```(?:.*?)\n(.*?)\n```\n(?:---)?',
-            content,
-            re.DOTALL
-        )
-
-        for match in files_section:
-            rel_path = match.group(1).strip()
-            file_content = match.group(2).strip()
-
-            if rel_path.startswith(root_folder_name + '/'):
-                rel_path = rel_path[len(root_folder_name) + 1:]
-
-            rel_path = rel_path.replace('│', '').strip()
-
-            try:
-                file_path = target_path / rel_path
-                file_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(file_content)
-            except Exception as e:
-                print(color_text(f"⚠️ Failed to create {rel_path} file: {str(e)}", 'warning'))
-
-        print(color_text(f"✅ The project has been successfully unpacked in: {target_path}", 'success'))
-        return True
-    except Exception as e:
-        print(color_text(f"❌ Unpacking error: {str(e)}", 'error'))
-        return False
-
-
-def open_output_file():
-    """Открывает выходной файл в приложении по умолчанию"""
-    config = load_config()
-    output_path = None
-
-    if config.get('output_path'):
-        output_path = Path(config['output_path'])
-        if not output_path.exists():
-            output_path = None
-
-    if output_path is None:
-        latest_paths = load_latest_paths()
-        if latest_paths.get('output_path'):
-            output_path = Path(latest_paths['output_path'])
-            if not output_path.exists():
-                output_path = None
-
-    if output_path is None:
-        print(color_text("Error: Output file not found in config or latest paths", 'error'))
-        return
-
-    try:
-        if sys.platform == 'win32':
-            os.startfile(output_path)
-        elif sys.platform == 'darwin':
-            subprocess.run(['open', output_path])
-        else:
-            subprocess.run(['xdg-open', output_path])
-        print(color_text(f"Opened output file: {output_path}", 'success'))
-    except Exception as e:
-        print(color_text(f"Error opening file: {str(e)}", 'error'))
-
-
-def open_config_file():
-    """Открывает файл конфигурации в приложении по умолчанию"""
-    config_path = get_config_path()
-    if not config_path.exists():
-        latest_paths = load_latest_paths()
-        if latest_paths.get('config_path'):
-            config_path = Path(latest_paths['config_path'])
-            if not config_path.exists():
-                print(color_text("Error: Config file not found in standard or latest paths", 'error'))
-                return
-
-    try:
-        if sys.platform == 'win32':
-            os.startfile(config_path)
-        elif sys.platform == 'darwin':
-            subprocess.run(['open', config_path])
-        else:
-            subprocess.run(['xdg-open', config_path])
-        print(color_text(f"Opened config file: {config_path}", 'success'))
-    except Exception as e:
-        print(color_text(f"Error opening config file: {str(e)}", 'error'))
-
-
-def handle_reset_command():
-    """Обрабатывает команду reset"""
-    if len(sys.argv) > 2:
-        if sys.argv[2] == '-c':
-            reset_config()
-        elif sys.argv[2] == '-o':
-            reset_output()
-        else:
-            print(color_text("Invalid reset option. Use -c for config or -o for output", 'error'))
-    else:
-        reset_config()
-        reset_output()
-
-
-def reset_config():
-    """Сбрасывает конфигурацию"""
-    try:
-        config_path = get_config_path()
-        if config_path.exists():
-            config_path.unlink()
-            print(color_text("Config file has been reset", 'success'))
-        else:
-            print(color_text("Config file does not exist", 'warning'))
-    except Exception as e:
-        print(color_text(f"Error resetting config: {str(e)}", 'error'))
-
-
-def reset_output():
-    """Сбрасывает выходной файл"""
-    config = load_config()
-    if not config['output_path']:
-        print(color_text("Output path is not set in config", 'warning'))
-        return
-
-    output_path = Path(config['output_path'])
-    try:
-        if output_path.exists():
-            output_path.unlink()
-            print(color_text(f"Output file {output_path} has been reset", 'success'))
-        else:
-            print(color_text(f"Output file {output_path} does not exist", 'warning'))
-    except Exception as e:
-        print(color_text(f"Error resetting output file: {str(e)}", 'error'))
-
-
-def redo_documentation():
-    """Повторно генерирует документацию с проверкой latest_paths.json"""
-    config_path = get_config_path()
-    config = None
-
-    if config_path.exists():
-        try:
-            config = load_config()
-        except Exception as e:
-            print(color_text(f"Error loading config: {str(e)}", 'error'))
-
-    if config is None:
-        latest_paths = load_latest_paths()
-        if latest_paths.get('config_path'):
-            alt_config_path = Path(latest_paths['config_path'])
-            if alt_config_path.exists() and alt_config_path != config_path:
-                print(color_text(f"Trying config from latest paths: {alt_config_path}", 'info'))
-                try:
-                    config = load_config()
-                    config_path = alt_config_path
-                except Exception as e:
-                    print(color_text(f"Error loading config from latest paths: {str(e)}", 'error'))
-
-    if config is None:
-        print(color_text("Error: No valid config file found", 'error'))
-        return
-
-    if not config.get('project_path'):
-        config['project_path'] = str(config_path.parent)
-        print(color_text(f"Using parent directory of config file as project path: {config['project_path']}", 'info'))
-
-    try:
-        root_path = os.path.normpath(config['project_path'])
-        root_name = os.path.basename(root_path)
-
-        print(color_text("\nScanning project structure...", 'info'))
-        print(color_text("\nScanning project structure...", 'info'))
-        tree, files = generate_file_tree(root_path, config)
-
-        print(color_text("\nGenerating documentation...", 'info'))
-        md_content = (
-            f"# Project Structure: {root_name}\n\n"
-            f"```\n{root_name}/\n{tree}\n```\n\n"
-            f"# Files Content\n\n{get_file_contents(files)}"
-        )
-
-        output_path = Path(config['output_path'])
-        if not output_path.parent.exists():
-            latest_paths = load_latest_paths()
-            if latest_paths.get('output_path'):
-                output_path = Path(latest_paths['output_path'])
-                print(color_text(f"Using output path from latest paths: {output_path}", 'info'))
-
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(md_content)
-
-
-        print(color_text("\nDocumentation regenerated successfully!", 'success'))
-        print(color_text(f"Output file: {output_path}", 'path'))
-        print(color_text(f"Total files processed: {len(files)}", 'info'))
-
-    except Exception as e:
-        print(color_text(f"\nError: {str(e)}", 'error'))
-
-
-
-
-def print_header():
-    """Выводит цветной заголовок программы"""
-    header = f"""
-   ____               ______ _ _        _____           _           _   
-  / __ \             |  ____(_) |      |  __ \         (_)         | |  
- | |  | |_ __   ___  | |__   _| | ___  | |__) | __ ___  _  ___  ___| |_ 
- | |  | | '_ \ / _ \ |  __| | | |/ _ \ |  ___/ '__/ _ \| |/ _ \/ __| __|
- | |__| | | | |  __/ | |    | | |  __/ | |   | | | (_) | |  __/ (__| |_ 
-  \____/|_| |_|\___| |_|    |_|_|\___| |_|   |_|  \___/| |\___|\___|\__|
-                                                      _/ |              
-                                                     |__/              
-    {cfg.PROGRAM_NAME.upper()} {cfg.VERSION}
-    """
-    print(color_text(header, 'highlight'))
-    print(color_text("=" * 60, 'info') + "\n")
-
-
-def get_config_path(config: Optional[Dict] = None) -> Path:
-    """Возвращает путь к файлу конфигурации"""
-    if config and config.get('project_path'):
-        return Path(config['project_path']) / cfg.CONFIG_FILE
-    return Path(cfg.CONFIG_FILE)
-
-
-
-
-def save_config(config: Dict):
-    """Сохраняет конфигурацию в файл"""
-    try:
-        if not config.get('project_path'):
-            print(color_text("Cannot save config: project path is not set", 'error'))
-            return
-
-        output_file = Path(config['output_path']).name
-        if output_file not in config['ignore_files']:
-            config['ignore_files'].append(output_file)
-
-        config_path = Path(config['project_path']) / cfg.CONFIG_FILE
-        with open(config_path, 'w', encoding='utf-8') as f:
-            json.dump(config, f, indent=2)
-        print(color_text(f"Configuration saved successfully in {config_path}", 'success'))
-    except Exception as e:
-        print(color_text(f"Error saving config: {str(e)}", 'error'))
-
-
-def get_input(prompt: str, default: Optional[str] = None) -> str:
-    """Получает ввод от пользователя с цветными подсказками"""
-    if default:
-        prompt = color_text(f"{prompt} [{default}]: ", 'info')
-    else:
-        prompt = color_text(f"{prompt}: ", 'info')
-    return input(prompt).strip() or default
-
-
-
-
-def generate_file_tree(root_path: str, config: Dict, current_path: str = None, prefix: str = '') -> Tuple[ str, List[Dict[str, str]]]:
-    """Генерирует дерево файлов"""
-    if current_path is None:
-        current_path = root_path
-
-    files_info = []
-    tree = []
-
-    if not os.path.isdir(current_path):
-        return '', files_info
-
-    contents = sorted(os.listdir(current_path))
-    pointers = ['├── '] * (len(contents) - 1) + ['└── ']
-
-    for pointer, name in zip(pointers, contents):
-        full_path = os.path.join(current_path, name)
-        rel_path = os.path.relpath(full_path, start=root_path).replace('\\', '/')
-
-        if should_ignore(full_path, rel_path, config):
-            continue
-
-        if os.path.isdir(full_path):
-            tree.append(f"{prefix}{pointer}{name}/")
-            subtree, sub_files = generate_file_tree(root_path, config, full_path,
-                                                    prefix + ('│   ' if pointer == '├── ' else '    '))
-            tree.append(subtree)
-            files_info.extend(sub_files)
-        else:
-            tree.append(f"{prefix}{pointer}{name}")
-            file_ext = os.path.splitext(name)[1]
-            files_info.append({
-                'path': full_path,
-                'rel_path': rel_path,
-                'extension': file_ext,
-                'language': get_language(file_ext)
-            })
-
-    return '\n'.join(tree), files_info
-
-
-
-
-def extract_code_blocks(content: str) -> str:
-    """Извлекает блоки кода из Markdown"""
-    lines = content.split('\n')
-    result = []
-    in_block = False
-    lang = ''
-    block = []
-
-    for line in lines:
-        if line.startswith('```') and not in_block:
-            in_block = True
-            lang = line[3:].strip()
-        elif line.startswith('```') and in_block:
-            in_block = False
-            if lang:
-                result.append(f"```{lang}")
-                result.extend(block)
-                result.append("```\n")
-            block = []
-            lang = ''
-        elif in_block:
-            block.append(line)
-        else:
-            result.append(line)
-
-    return '\n'.join(result)
-
-
-def get_file_contents(files_info: List[Dict[str, str]]) -> str:
-    """Получает содержимое файлов"""
-    contents = []
-    for file_info in files_info:
-        try:
-            with open(file_info['path'], 'r', encoding='utf-8') as f:
-                content = f.read()
-                if file_info['extension'] == '.md':
-                    content = extract_code_blocks(content)
-        except UnicodeDecodeError:
-            try:
-                with open(file_info['path'], 'r', encoding='latin-1') as f:
-                    content = f.read()
-            except:
-                content = "Binary file or unsupported encoding"
-        except Exception as e:
-            content = f"Error reading file: {str(e)}"
-
-        contents.append(
-            f"## {file_info['rel_path']}\n\n"
-            f"```{file_info['language']}\n"
-            f"{content}\n"
-            f"```\n\n"
-            f"---\n\n"
-        )
-    return '\n'.join(contents)
-
-
-def edit_config(config: Dict, cli_project_path: str = None) -> Dict:
-    """Интерактивное редактирование конфигурации"""
-    if cli_project_path:
-        project_path = os.path.abspath(cli_project_path)
-        config['project_path'] = project_path
-        if config['output_path'] == cfg.DEFAULT_CONFIG['output_path']:
-            config['output_path'] = str(Path(project_path) / "project_documentation.md")
-        return config
-
-    print(color_text("\nCurrent configuration:", 'highlight'))
-    print(json.dumps(config, indent=2))
-
-    print(color_text("\nEdit configuration:", 'highlight'))
-    config['project_path'] = get_input("Project path", config['project_path'])
-
-    if config['project_path'] and config['output_path'] == cfg.DEFAULT_CONFIG['output_path']:
-        config['output_path'] = str(Path(config['project_path']) / "project_documentation.md")
-
-    config['output_path'] = get_input("Output file path", config['output_path'])
-
-    print(color_text("\nFilter settings:", 'highlight'))
-    config['show_hidden'] = input(color_text("Show hidden files? (y/n) [n]: ", 'info')).lower() == 'y'
-
-    print(color_text("\nWhitelist settings:", 'highlight'))
-    print(color_text("Current whitelist paths (empty means all files):", 'info'),
-          ', '.join(config.get('whitelist_paths', [])))
-    if input(color_text("Edit? (y/n) [n]: ", 'info')).lower() == 'y':
-        new_paths = input(
-            color_text("Enter paths to include (comma separated, * for wildcard, relative to project): ", 'info'))
-        config['whitelist_paths'] = [p.strip() for p in new_paths.split(',') if p.strip()]
-
-    print(color_text("\nIgnore settings:", 'highlight'))
-    print(color_text("Current ignored folders:", 'info'), ', '.join(config['ignore_folders']))
-    if input(color_text("Edit? (y/n) [n]: ", 'info')).lower() == 'y':
-        new_folders = input(color_text("Enter folders to ignore (comma separated): ", 'info'))
-        config['ignore_folders'] = [f.strip() for f in new_folders.split(',') if f.strip()] or config['ignore_folders']
-
-    print(color_text("\nCurrent ignored files:", 'info'), ', '.join(config['ignore_files']))
-    if input(color_text("Edit? (y/n) [n]: ", 'info')).lower() == 'y':
-        new_files = input(color_text("Enter file patterns to ignore (comma separated, * for wildcard): ", 'info'))
-        config['ignore_files'] = [f.strip() for f in new_files.split(',') if f.strip()] or config['ignore_files']
-
-    print(color_text("\nCurrent ignored paths:", 'info'), ', '.join(config['ignore_paths']))
-    if input(color_text("Edit? (y/n) [n]: ", 'info')).lower() == 'y':
-        new_paths = input(color_text("Enter full paths to ignore (comma separated, * for wildcard): ", 'info'))
-        config['ignore_paths'] = [p.strip() for p in new_paths.split(',') if p.strip()] or config['ignore_paths']
-
-    return config
 
 
 def main():
 
     cli_project_path = parse_args()
-    print_header()
+    commands.print_header()
 
-    config = load_config()
-    config = edit_config(config, cli_project_path)
+    config = utils.load_config()
+    config = utils.edit_config(config, cli_project_path)
 
     if not config['project_path']:
-        print(color_text("Error: Project path is required!", 'error'))
+        print(utils.color_text("Error: Project path is required!", 'error'))
         return
 
     if not os.path.isdir(config['project_path']):
-        print(color_text(f"Error: Directory '{config['project_path']}' does not exist!", 'error'))
+        print(utils.color_text(f"Error: Directory '{config['project_path']}' does not exist!", 'error'))
         return
 
     try:
         root_path = os.path.normpath(config['project_path'])
         root_name = os.path.basename(root_path)
 
-        print(color_text("\nScanning project structure...", 'info'))
-        tree, files = generate_file_tree(root_path, config)
+        print(utils.color_text("\nScanning project structure...", 'info'))
+        tree, files = utils.generate_file_tree(root_path, config)
 
-        print(color_text("\nGenerating documentation...", 'info'))
+        print(utils.color_text("\nGenerating documentation...", 'info'))
         md_content = (
             f"# Project Structure: {root_name}\n\n"
             f"```\n{root_name}/\n{tree}\n```\n\n"
-            f"# Files Content\n\n{get_file_contents(files)}"
+            f"# Files Content\n\n{utils.get_file_contents(files)}"
         )
 
         output_path = Path(config['output_path'])
@@ -604,15 +136,15 @@ def main():
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(md_content)
 
-        save_config(config)
-        save_latest_paths(str(output_path))
+        utils.save_config(config)
+        utils.save_latest_paths(str(output_path))
 
-        print(color_text("\nDocumentation generated successfully!", 'success'))
-        print(color_text(f"Output file: {output_path}", 'path'))
-        print(color_text(f"Total files processed: {len(files)}", 'info'))
+        print(utils.color_text("\nDocumentation generated successfully!", 'success'))
+        print(utils.color_text(f"Output file: {output_path}", 'path'))
+        print(utils.color_text(f"Total files processed: {len(files)}", 'info'))
 
     except Exception as e:
-        print(color_text(f"\nError: {str(e)}", 'error'))
+        print(utils.color_text(f"\nError: {str(e)}", 'error'))
 
 
 if __name__ == "__main__":

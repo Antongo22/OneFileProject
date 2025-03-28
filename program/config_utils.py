@@ -1,5 +1,5 @@
 from pathlib import Path
-from colorama import init, Fore, Style
+from colorama import Fore
 
 PREFIX = "../data"
 
@@ -14,7 +14,6 @@ def get_version():
     """Получает версию из файла version или возвращает v0.0.0 при ошибке"""
     try:
         with open(Path(__file__).parent / f'{PREFIX}/version', 'r') as f:
-            print(f)
             version = f.read().strip()
             if version and version[0].isdigit():
                 return f"v{version.split()[0]}"
