@@ -8,96 +8,11 @@ import fnmatch
 from colorama import init, Fore, Style
 import signal
 import re
-
+import program.config_utils as cfg
 import installer
 
 init(autoreset=True)
 
-PROGRAM_NAME = "ofp"
-CONFIG_FILE = "project_documenter_config.json"
-LATEST_PATHS_FILE = str(Path(__file__).parent / "latest_paths.json")
-
-
-def get_version():
-    """Получает версию из файла version или возвращает v0.0.0 при ошибке"""
-    try:
-        with open(Path(__file__).parent / 'version', 'r') as f:
-            version = f.read().strip()
-            if version and version[0].isdigit():
-                return f"v{version.split()[0]}"
-            return version.split()[0] if version else "v/././"
-    except:
-        return "v0.0.0"
-
-
-VERSION = get_version()
-
-COLORS = {
-    'error': Fore.RED,
-    'success': Fore.GREEN,
-    'warning': Fore.YELLOW,
-    'info': Fore.CYAN,
-    'path': Fore.BLUE,
-    'highlight': Fore.MAGENTA
-}
-
-LANGUAGE_MAPPING = {
-    '.py': 'python',
-    '.js': 'javascript',
-    '.ts': 'typescript',
-    '.java': 'java',
-    '.kt': 'kotlin',
-    '.cpp': 'cpp',
-    '.h': 'c',
-    '.c': 'c',
-    '.cs': 'csharp',
-    '.go': 'go',
-    '.rs': 'rust',
-    '.rb': 'ruby',
-    '.php': 'php',
-    '.swift': 'swift',
-    '.html': 'html',
-    '.css': 'css',
-    '.scss': 'scss',
-    '.less': 'less',
-    '.json': 'json',
-    '.xml': 'xml',
-    '.yml': 'yaml',
-    '.yaml': 'yaml',
-    '.toml': 'toml',
-    '.ini': 'ini',
-    '.conf': 'ini',
-    '.env': 'ini',
-    '.sh': 'bash',
-    '.bash': 'bash',
-    '.zsh': 'bash',
-    '.fish': 'bash',
-    '.ps1': 'powershell',
-    '.csv': 'csv',
-    '.tsv': 'csv',
-    '.sql': 'sql',
-    '.md': 'markdown',
-    '.txt': 'text',
-}
-
-DEFAULT_CONFIG = {
-    'project_path': '',
-    'output_path': 'project_documentation.md',
-    'ignore_folders': ['.git', '__pycache__', 'node_modules', 'venv'],
-    'ignore_files': [
-        '.gitignore', '.env', CONFIG_FILE, '*.md',
-        '*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp', '*.tiff', '*.svg',
-        '*.mp3', '*.mp4', '*.avi', '*.mov', '*.wav',
-        '*.zip', '*.tar', '*.gz', '*.rar', '*.7z',
-        '*.pdf', '*.doc', '*.docx', '*.xls', '*.xlsx', '*.ppt', '*.pptx',
-        '*.exe', '*.dll', '*.so', '*.bin',
-        '*.iml', '*.swp', '*.swo',
-        '*.ico', '*.icns', '*.jar', '*.war'
-    ],
-    'ignore_paths': [],
-    'whitelist_paths': [],
-    'show_hidden': False
-}
 
 
 def save_latest_paths(output_path: str):
@@ -116,7 +31,7 @@ def save_latest_paths(output_path: str):
     try:
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        with open(LATEST_PATHS_FILE, 'w', encoding='utf-8') as f:
+        with open(cfg.LATEST_PATHS_FILE, 'w', encoding='utf-8') as f:
             json.dump(latest_paths, f, indent=2)
 
     except Exception as e:
@@ -126,8 +41,8 @@ def save_latest_paths(output_path: str):
 def load_latest_paths() -> Dict:
     """Загружает последние использованные пути из директории программы"""
     try:
-        if os.path.exists(LATEST_PATHS_FILE):
-            with open(LATEST_PATHS_FILE, 'r', encoding='utf-8') as f:
+        if os.path.exists(cfg.LATEST_PATHS_FILE):
+            with open(cfg.LATEST_PATHS_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
         return {}
     except Exception as e:
@@ -155,7 +70,7 @@ def print_help(lang='en'):
         help_text = f"""
 {color_text(texts['title'], 'highlight')}
 {color_text(texts['usage'], 'info')}
-    {PROGRAM_NAME} [command] [options]
+    {cfg.PROGRAM_NAME} [command] [options]
 {color_text(texts['commands'], 'info')}"""
         for cmd, desc in texts['commands_list']:
             help_text += f"\n    {color_text(cmd, 'path')}{' ' * (20 - len(cmd))}{desc}"
@@ -173,7 +88,7 @@ def print_project_info():
 {color_text("Project Information:", 'info')}
 {color_text("Author:", 'info')} {color_text("Anton Aleynichenko - https://aleynichenko.ru", 'highlight')}
 {color_text("Repository:", 'info')} {color_text("https://github.com/Antongo22/OneFileProject", 'highlight')}
-{color_text("Version:", 'info')} {color_text(VERSION, 'highlight')}
+{color_text("Version:", 'info')} {color_text(cfg.VERSION, 'highlight')}
 """
     print(info_text)
 
@@ -213,7 +128,7 @@ def parse_args():
             redo_documentation()
             sys.exit(0)
         elif "version" in sys.argv[1:]:
-            print(f"Current version: {color_text(VERSION, 'highlight')}")
+            print(f"Current version: {color_text(cfg.VERSION, 'highlight')}")
             sys.exit(0)
         elif "info" in sys.argv[1:]:
             print_project_info()
@@ -482,7 +397,7 @@ def redo_documentation():
 
 def color_text(text: str, color_type: str) -> str:
     """Возвращает цветной текст для консоли"""
-    return f"{COLORS.get(color_type, '')}{text}{Style.RESET_ALL}"
+    return f"{cfg.COLORS.get(color_type, '')}{text}{Style.RESET_ALL}"
 
 
 def print_header():
@@ -496,7 +411,7 @@ def print_header():
   \____/|_| |_|\___| |_|    |_|_|\___| |_|   |_|  \___/| |\___|\___|\__|
                                                       _/ |              
                                                      |__/              
-    {PROGRAM_NAME.upper()} {VERSION}
+    {cfg.PROGRAM_NAME.upper()} {cfg.VERSION}
     """
     print(color_text(header, 'highlight'))
     print(color_text("=" * 60, 'info') + "\n")
@@ -505,36 +420,36 @@ def print_header():
 def get_config_path(config: Optional[Dict] = None) -> Path:
     """Возвращает путь к файлу конфигурации"""
     if config and config.get('project_path'):
-        return Path(config['project_path']) / CONFIG_FILE
-    return Path(CONFIG_FILE)
+        return Path(config['project_path']) / cfg.CONFIG_FILE
+    return Path(cfg.CONFIG_FILE)
 
 
 def load_config() -> Dict:
     """Загружает конфигурацию без рекурсии"""
     try:
-        config_path = Path(CONFIG_FILE)
+        config_path = Path(cfg.CONFIG_FILE)
         if config_path.exists():
             with open(config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
                 if config.get('project_path'):
-                    project_config_path = Path(config['project_path']) / CONFIG_FILE
+                    project_config_path = Path(config['project_path']) / cfg.CONFIG_FILE
                     if not project_config_path.exists():
                         project_config_path.parent.mkdir(parents=True, exist_ok=True)
                         with open(project_config_path, 'w', encoding='utf-8') as pf:
                             json.dump(config, pf, indent=2)
                         config_path.unlink()
-                return {**DEFAULT_CONFIG, **config}
+                return {**cfg.DEFAULT_CONFIG, **config}
 
-        project_config_path = Path(DEFAULT_CONFIG['project_path']) / CONFIG_FILE if DEFAULT_CONFIG['project_path'] else None
+        project_config_path = Path(cfg.DEFAULT_CONFIG['project_path']) / cfg.CONFIG_FILE if cfg.DEFAULT_CONFIG['project_path'] else None
         if project_config_path and project_config_path.exists():
             with open(project_config_path, 'r', encoding='utf-8') as f:
                 config = json.load(f)
-                return {**DEFAULT_CONFIG, **config}
+                return {**cfg.DEFAULT_CONFIG, **config}
 
-        return DEFAULT_CONFIG.copy()
+        return cfg.DEFAULT_CONFIG.copy()
     except Exception as e:
         print(color_text(f"Error loading config: {str(e)}", 'error'))
-        return DEFAULT_CONFIG.copy()
+        return cfg.DEFAULT_CONFIG.copy()
 
 def save_config(config: Dict):
     """Сохраняет конфигурацию в файл"""
@@ -547,7 +462,7 @@ def save_config(config: Dict):
         if output_file not in config['ignore_files']:
             config['ignore_files'].append(output_file)
 
-        config_path = Path(config['project_path']) / CONFIG_FILE
+        config_path = Path(config['project_path']) / cfg.CONFIG_FILE
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2)
         print(color_text(f"Configuration saved successfully in {config_path}", 'success'))
@@ -636,7 +551,7 @@ def generate_file_tree(root_path: str, config: Dict, current_path: str = None, p
 
 def get_language(extension: str) -> str:
     """Определяет язык для подсветки синтаксиса"""
-    return LANGUAGE_MAPPING.get(extension.lower(), 'text')
+    return cfg.LANGUAGE_MAPPING.get(extension.lower(), 'text')
 
 
 def extract_code_blocks(content: str) -> str:
@@ -700,7 +615,7 @@ def edit_config(config: Dict, cli_project_path: str = None) -> Dict:
     if cli_project_path:
         project_path = os.path.abspath(cli_project_path)
         config['project_path'] = project_path
-        if config['output_path'] == DEFAULT_CONFIG['output_path']:
+        if config['output_path'] == cfg.DEFAULT_CONFIG['output_path']:
             config['output_path'] = str(Path(project_path) / "project_documentation.md")
         return config
 
@@ -710,7 +625,7 @@ def edit_config(config: Dict, cli_project_path: str = None) -> Dict:
     print(color_text("\nEdit configuration:", 'highlight'))
     config['project_path'] = get_input("Project path", config['project_path'])
 
-    if config['project_path'] and config['output_path'] == DEFAULT_CONFIG['output_path']:
+    if config['project_path'] and config['output_path'] == cfg.DEFAULT_CONFIG['output_path']:
         config['output_path'] = str(Path(config['project_path']) / "project_documentation.md")
 
     config['output_path'] = get_input("Output file path", config['output_path'])
