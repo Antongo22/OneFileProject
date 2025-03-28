@@ -4,9 +4,6 @@ from colorama import Fore
 PREFIX = "../data"
 VERSION_FILE=f'{PREFIX}/version'
 
-# Создаем папку, если она не существует
-Path(PREFIX).mkdir(parents=True, exist_ok=True)
-
 PROGRAM_NAME = "ofp"
 CONFIG_FILE = "project_documenter_config.json"
 LATEST_PATHS_FILE = str(Path(__file__).parent / f"{PREFIX}/latest_paths.json")
