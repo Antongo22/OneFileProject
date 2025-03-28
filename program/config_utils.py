@@ -2,6 +2,7 @@ from pathlib import Path
 from colorama import Fore
 
 PREFIX = "../data"
+VERSION_FILE=f'{PREFIX}/version'
 
 # Создаем папку, если она не существует
 Path(PREFIX).mkdir(parents=True, exist_ok=True)
@@ -13,7 +14,7 @@ LATEST_PATHS_FILE = str(Path(__file__).parent / f"{PREFIX}/latest_paths.json")
 def get_version():
     """Получает версию из файла version или возвращает v0.0.0 при ошибке"""
     try:
-        with open(Path(__file__).parent / f'{PREFIX}/version', 'r') as f:
+        with open(Path(__file__).parent / VERSION_FILE  , 'r') as f:
             version = f.read().strip()
             if version and version[0].isdigit():
                 return f"v{version.split()[0]}"
