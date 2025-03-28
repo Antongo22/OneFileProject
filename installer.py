@@ -43,7 +43,7 @@ def update():
         print(f"🔄 Cloning the repository for updating (current version: {current_version})...")
         subprocess.run(["git", "clone", REPO_URL, temp_dir], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-        version_file = cfg.VERSION_FILE
+        version_file = temp_dir / cfg.VERSION_FILE
         if version_file.exists():
             with open(version_file, 'r') as f:
                 new_version = f.read().strip()
