@@ -75,7 +75,7 @@ DEFAULT_CONFIG = {
     'output_path': 'project_documentation.md',
     'ignore_folders': ['.git', '__pycache__', 'node_modules', 'venv'],
     'ignore_files': [
-        '.gitignore', '.env', CONFIG_FILE, '*.md',
+        '.gitignore', '.env', CONFIG_FILE, 'latest_paths.json', '*.md',
         '*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp', '*.tiff', '*.svg',
         '*.mp3', '*.mp4', '*.avi', '*.mov', '*.wav',
         '*.zip', '*.tar', '*.gz', '*.rar', '*.7z',

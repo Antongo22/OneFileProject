@@ -3,7 +3,6 @@ import sys
 from pathlib import Path
 from colorama import init
 import signal
-import re
 import program.config_utils as cfg
 import installer
 import program.utils as utils
@@ -44,7 +43,7 @@ def parse_args():
             installer.uninstall()
             sys.exit(0)
         elif "update" in sys.argv[1:]:
-            print(utils.color_text("The entire cache will be cleared!", 'warning'))
+            print(utils.color_text("❗️ The entire cache will be cleared!", 'warning'))
             installer.update()
             sys.exit(0)
         elif "open" in sys.argv[1:]:

@@ -4,10 +4,6 @@ import sys
 import json
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
-import fnmatch
-from colorama import init, Fore, Style
-import signal
 import re
 import program.config_utils as cfg
 
