@@ -30,7 +30,7 @@ def print_help(lang='en'):
             help_text += f"\n    {utils.color_text(cmd, 'path')}{' ' * (20 - len(cmd))}{desc}"
         help_text += f"\n\n{utils.color_text(texts['examples'], 'info')}"
         for ex, desc in texts['examples_list']:
-            help_text += f"\n    {ex}{' ' * (30 - len(ex))}{desc}"
+            help_text += f"\n    {utils.color_text(ex, 'highlight')}{' ' * (30 - len(ex))}{desc}"
         print(f"\n{help_text}\n")
     except Exception as e:
         print(utils.color_text(f"\nError loading help: {str(e)}\n", 'error'))
