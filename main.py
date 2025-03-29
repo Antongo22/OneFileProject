@@ -44,6 +44,7 @@ def parse_args():
             installer.uninstall()
             sys.exit(0)
         elif "update" in sys.argv[1:]:
+            print(utils.color_text("The entire cache will be cleared!", 'warning'))
             installer.update()
             sys.exit(0)
         elif "open" in sys.argv[1:]:
