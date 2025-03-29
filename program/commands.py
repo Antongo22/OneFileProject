@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 import re
 import program.config_utils as cfg
+from typing import Optional
 
 LANG_PATH = "../help_texts"
 
@@ -294,6 +295,56 @@ def print_header():
     print(utils.color_text("=" * 60, 'info') + "\n")
 
 
+def generate_documentation(project_path: str, output_path: str, config: Optional[dict] = None) -> str:
+    """
+    Генерирует документацию проекта и сохраняет в указанный файл
+    Возвращает строку с результатом операции
+    """
+    from pathlib import Path
+    import os
+    from program import utils
 
+    # Загружаем конфиг если не передан
+    if config is None:
+        config = utils.load_config()
 
+    # Проверяем пути
+    if not project_path:
+        return utils.color_text("Error: Project path is required!", 'error')
 
+    if not os.path.isdir(project_path):
+        return utils.color_text(f"Error: Directory '{project_path}' does not exist!", 'error')
+
+    try:
+        root_path = os.path.normpath(project_path)
+        root_name = os.path.basename(root_path)
+
+        config['project_path'] = project_path
+        config['output_path'] = output_path
+
+        tree, files = utils.generate_file_tree(root_path, config)
+
+        md_content = (
+            f"# Project Structure: {root_name}\n\n"
+            f"```\n{root_name}/\n{tree}\n```\n\n"
+            f"# Files Content\n\n{utils.get_file_contents(files)}"
+        )
+
+        output_path_obj = Path(output_path)
+        output_path_obj.parent.mkdir(parents=True, exist_ok=True)
+
+        with open(output_path_obj, 'w', encoding='utf-8') as f:
+            f.write(md_content)
+
+        utils.save_config(config)
+        utils.save_latest_paths(str(output_path_obj))
+
+        result = (
+            f"{utils.color_text('Documentation generated successfully!', 'success')}\n"
+            f"{utils.color_text(f'Output file: {output_path}', 'path')}\n"
+            f"{utils.color_text(f'Total files processed: {len(files)}', 'info')}"
+        )
+        return result
+
+    except Exception as e:
+        return utils.color_text(f"\nError: {str(e)}", 'error')

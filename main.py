@@ -8,6 +8,7 @@ import installer
 import program.utils as utils
 import program.commands as commands
 
+
 init(autoreset=True)
 
 
@@ -78,12 +79,15 @@ def parse_args():
 
             print(utils.color_text(f"Current working directory: {Path(__file__).parent}", 'info'))
             sys.exit(0)
+        elif "tui" in sys.argv[1:]:
+            run_tui()
+            sys.exit(0)
 
         if len(sys.argv) > 1 and sys.argv[1] == ".":
             project_path = os.getcwd()
         elif len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
             if sys.argv[1] not in ["unpack", "open", "conf", "reset", "redo", "update", "uninstall",
-                                   "version", "info", "pwd"]:
+                                   "version", "info", "pwd", "tui"]:
                 potential_path = sys.argv[1]
                 if not os.path.exists(potential_path):
                     print(utils.color_text(f"Error: Path '{potential_path}' does not exist!", 'error'))
@@ -101,51 +105,17 @@ def parse_args():
 
 
 def main():
-
     cli_project_path = parse_args()
     commands.print_header()
 
     config = utils.load_config()
     config = utils.edit_config(config, cli_project_path)
 
-    if not config['project_path']:
-        print(utils.color_text("Error: Project path is required!", 'error'))
-        return
+    project_path = config.get('project_path', '')
+    output_path = config.get('output_path', 'project_documentation.md')
 
-    if not os.path.isdir(config['project_path']):
-        print(utils.color_text(f"Error: Directory '{config['project_path']}' does not exist!", 'error'))
-        return
-
-    try:
-        root_path = os.path.normpath(config['project_path'])
-        root_name = os.path.basename(root_path)
-
-        print(utils.color_text("\nScanning project structure...", 'info'))
-        tree, files = utils.generate_file_tree(root_path, config)
-
-        print(utils.color_text("\nGenerating documentation...", 'info'))
-        md_content = (
-            f"# Project Structure: {root_name}\n\n"
-            f"```\n{root_name}/\n{tree}\n```\n\n"
-            f"# Files Content\n\n{utils.get_file_contents(files)}"
-        )
-
-        output_path = Path(config['output_path'])
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-
-        with open(output_path, 'w', encoding='utf-8') as f:
-            f.write(md_content)
-
-        utils.save_config(config)
-        utils.save_latest_paths(str(output_path))
-
-        print(utils.color_text("\nDocumentation generated successfully!", 'success'))
-        print(utils.color_text(f"Output file: {output_path}", 'path'))
-        print(utils.color_text(f"Total files processed: {len(files)}", 'info'))
-
-    except Exception as e:
-        print(utils.color_text(f"\nError: {str(e)}", 'error'))
-
+    result = commands.generate_documentation(project_path, output_path, config)
+    print(result)
 
 if __name__ == "__main__":
     main()
