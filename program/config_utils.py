@@ -73,7 +73,7 @@ LANGUAGE_MAPPING = {
 DEFAULT_CONFIG = {
     'project_path': '',
     'output_path': 'project_documentation.md',
-    'ignore_folders': ['.git', '__pycache__', 'node_modules', 'venv'],
+    'ignore_folders': ['.git', '__pycache__', '.venv'],
     'ignore_files': [
         '.gitignore', '.env', CONFIG_FILE, 'latest_paths.json', '*.md',
         '*.png', '*.jpg', '*.jpeg', '*.gif', '*.bmp', '*.tiff', '*.svg',

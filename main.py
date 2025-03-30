@@ -7,7 +7,7 @@ import program.config_utils as cfg
 import installer
 import program.utils as utils
 import program.commands as commands
-
+from program.tui import run_tui
 
 init(autoreset=True)
 
@@ -63,7 +63,7 @@ def parse_args():
             print(f"Current version: {utils.color_text(cfg.VERSION, 'highlight')}")
             sys.exit(0)
         elif "info" in sys.argv[1:]:
-            commands.print_project_info()
+            print(commands.print_project_info())
             sys.exit(0)
         elif "unpack" in sys.argv[1:]:
             if len(sys.argv) < 4:

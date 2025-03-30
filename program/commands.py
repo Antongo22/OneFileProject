@@ -33,17 +33,14 @@ def print_help(lang='en'):
         print(utils.color_text(f"\nError loading help: {str(e)}\n", 'error'))
 
 
-def print_project_info():
+def print_project_info() -> str:
     """Выводит информацию о проекте с цветным оформлением"""
-    info_text = f"""
+    return f"""
 {utils.color_text("Project Information:", 'info')}
 {utils.color_text("Author:", 'info')} {utils.color_text("Anton Aleynichenko - https://aleynichenko.ru", 'highlight')}
 {utils.color_text("Repository:", 'info')} {utils.color_text("https://github.com/Antongo22/OneFileProject", 'highlight')}
 {utils.color_text("Version:", 'info')} {utils.color_text(cfg.VERSION, 'highlight')}
 """
-
-    print_header()
-    print(info_text)
 
 
 def unpack(doc_file: str, target_dir: str):
@@ -108,7 +105,7 @@ def unpack(doc_file: str, target_dir: str):
         return False
 
 
-def open_output_file():
+def open_output_file() -> Optional[Path]:
     """Открывает выходной файл в приложении по умолчанию"""
     config = utils.load_config()
     output_path = None
@@ -127,7 +124,7 @@ def open_output_file():
 
     if output_path is None:
         print(utils.color_text("Error: Output file not found in config or latest paths", 'error'))
-        return
+        return None
 
     try:
         if sys.platform == 'win32':
@@ -137,8 +134,10 @@ def open_output_file():
         else:
             subprocess.run(['xdg-open', output_path])
         print(utils.color_text(f"Opened output file: {output_path}", 'success'))
+        return output_path
     except Exception as e:
         print(utils.color_text(f"Error opening file: {str(e)}", 'error'))
+        return None
 
 
 def open_config_file():
