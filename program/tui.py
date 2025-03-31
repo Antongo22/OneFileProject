@@ -11,15 +11,10 @@ import json
 from typing import Optional
 
 from program import utils, config_utils as cfg
-from program.commands import (
-    open_output_file,
-    open_config_file,
-    print_project_info,
-    generate_documentation,
-    unpack
-)
-import program.commands as commands
 
+import program.commands as commands
+from rich.markdown import Markdown
+from rich.console import Console
 
 class ConfigEditor(Screen):
     """Экран редактирования конфигурации"""
@@ -165,7 +160,7 @@ class UnpackScreen(Screen):
             return
 
         try:
-            result, text = unpack(doc_path, target_path)
+            result, text = commands.unpack(doc_path, target_path)
 
             # Получаем доступ к главному контенту
             content = self.app.query_one("#content")
@@ -184,6 +179,56 @@ class UnpackScreen(Screen):
     @on(Button.Pressed, "#cancel-unpack")
     def cancel_unpack(self):
         self.app.pop_screen()
+
+
+class MarkdownViewer(Screen):
+    """Экран для безопасного просмотра Markdown"""
+    CSS = """
+    #md-viewer {
+        width: 95%;
+        height: 90%;
+        border: solid $accent;
+        padding: 1;
+    }
+    #md-content {
+        width: 100%;
+    }
+    """
+
+    def __init__(self, content: str):
+        super().__init__()
+        self.content = self.sanitize_markdown(content)
+
+    def sanitize_markdown(self, text: str) -> str:
+        """Очистка Markdown от проблемных символов"""
+        text = text.replace("[", "(").replace("]", ")")
+
+        text = text.replace("[/]", "").replace("[red]", "").replace("[green]", "")
+
+        lines = []
+        for line in text.splitlines():
+            if line.startswith("# "):
+                lines.append(f"=== {line[2:]} ===")
+            elif line.startswith("## "):
+                lines.append(f"--- {line[3:]} ---")
+            elif line.startswith("### "):
+                lines.append(f"{line[4:]}")
+            else:
+                lines.append(line)
+
+        return "\n".join(lines)
+
+    def compose(self) -> ComposeResult:
+        yield ScrollableContainer(
+            Static(self.content, id="md-content"),
+            id="md-viewer"
+        )
+        yield Button("Закрыть", id="close-md")
+
+    @on(Button.Pressed, "#close-md")
+    def close_viewer(self):
+        self.app.pop_screen()
+
 
 
 
@@ -225,6 +270,7 @@ class OFPTUI(App):
         yield Container(
             Button("Сгенерировать", id="generate", variant="success"),
             Button("Открыть док.", id="open_doc"),
+            Button("Открыть док. здесь", id="view_md"),
             Button("Открыть конфиг", id="open-config"),
             Button("Редакт. конфиг", id="edit-config"),
             Button("Распаковать", id="unpack"),
@@ -265,7 +311,7 @@ class OFPTUI(App):
 
                 content.update("Идёт генерация документации...")
                 try:
-                    result = generate_documentation(project_path, output_path)
+                    result = commands.generate_documentation(project_path, output_path)
                     clean_result = commands.ansi_to_textual(result)
                     content.update(f"Генерация завершена!\n{clean_result}")
 
@@ -299,7 +345,7 @@ class OFPTUI(App):
         content = self.query_one("#content")
         content.update("Попытка открыть конфиг...")
         try:
-            open_config_file()
+            commands.open_config_file()
             content.update("[green]Конфиг открыт в ассоциированном приложении[/]")
         except Exception as e:
             content.update(f"[red]Ошибка: {str(e)}[/]")
@@ -325,6 +371,19 @@ class OFPTUI(App):
         except Exception as e:
             content.update("Error loading info")
 
+
+    @on(Button.Pressed, "#view_md")
+    async def view_markdown(self):
+        """Открыть Markdown в отдельном экране"""
+        try:
+            path = commands.open_output_file(False)
+            if path and os.path.exists(path):
+                with open(path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    await self.push_screen(MarkdownViewer(content))
+        except Exception as e:
+            error_msg = str(e).replace("[", "").replace("]", "")
+            self.notify(f"Ошибка: {error_msg}", severity="error")
 
 def run_tui():
     """Запуск TUI интерфейса"""

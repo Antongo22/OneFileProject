@@ -104,7 +104,7 @@ def unpack(doc_file: str, target_dir: str) -> (bool, Optional[str]):
         return False, res
 
 
-def open_output_file() -> Optional[Path]:
+def open_output_file(isOpen: bool = True) -> Optional[Path]:
     """Открывает выходной файл в приложении по умолчанию"""
     config = utils.load_config()
     output_path = None
@@ -124,6 +124,9 @@ def open_output_file() -> Optional[Path]:
     if output_path is None:
         print(utils.color_text("Error: Output file not found in config or latest paths", 'error'))
         return None
+
+    if not isOpen:
+        return output_path
 
     try:
         if sys.platform == 'win32':
