@@ -142,7 +142,7 @@ def open_output_file(isOpen: bool = True) -> Optional[Path]:
         return None
 
 
-def open_config_file():
+def open_config_file() -> Optional[Path]:
     """Открывает файл конфигурации в приложении по умолчанию"""
     config_path = utils.get_config_path()
     if not config_path.exists():
@@ -151,7 +151,7 @@ def open_config_file():
             config_path = Path(latest_paths['config_path'])
             if not config_path.exists():
                 print(utils.color_text("Error: Config file not found in standard or latest paths", 'error'))
-                return
+                return None
 
     try:
         if sys.platform == 'win32':
@@ -161,8 +161,10 @@ def open_config_file():
         else:
             subprocess.run(['xdg-open', config_path])
         print(utils.color_text(f"Opened config file: {config_path}", 'success'))
+        return config_path
     except Exception as e:
         print(utils.color_text(f"Error opening config file: {str(e)}", 'error'))
+        return None
 
 
 def handle_reset_command():

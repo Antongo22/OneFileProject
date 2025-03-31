@@ -8,13 +8,12 @@ from textual import on, events
 from pathlib import Path
 import os
 import json
-from typing import Optional
 
 from program import utils, config_utils as cfg
 
 import program.commands as commands
-from rich.markdown import Markdown
-from rich.console import Console
+from textual.widgets import Markdown as TextualMarkdown
+
 
 class ConfigEditor(Screen):
     """Экран редактирования конфигурации"""
@@ -75,7 +74,7 @@ class PathInputScreen(Screen):
         border: solid $accent;
         padding: 2;
     }
-    
+
     Static {
         width: 100%;
         margin-bottom: 1;
@@ -90,15 +89,15 @@ class PathInputScreen(Screen):
     }
     """
 
-    def __init__(self, title: str, default: str = ""):
+    def __init__(self, title: str, default: str = None):
         super().__init__()
         self.title = title
-        self.default = default
+        self.default = default or os.getcwd()
 
     def compose(self) -> ComposeResult:
         yield Container(
             Static(self.title),
-            Input(placeholder=self.default, id="path-input"),
+            Input(value=self.default, placeholder="Введите путь или оставьте текущий", id="path-input"),
             Button("Подтвердить", id="confirm-path", variant="primary"),
             Button("Отмена", id="cancel-path"),
             id="path-container"
@@ -107,7 +106,14 @@ class PathInputScreen(Screen):
     @on(Button.Pressed, "#confirm-path")
     def confirm_path(self):
         path_input = self.query_one("#path-input")
-        self.dismiss(path_input.value or self.default)
+        input_value = path_input.value.strip()
+
+        if input_value == ".":
+            input_value = os.getcwd()
+        elif not input_value:
+            input_value = self.default
+
+        self.dismiss(input_value)
 
     @on(Button.Pressed, "#cancel-path")
     def cancel_path(self):
@@ -181,46 +187,33 @@ class UnpackScreen(Screen):
         self.app.pop_screen()
 
 
+
 class MarkdownViewer(Screen):
-    """Экран для безопасного просмотра Markdown"""
+    """Экран для просмотра Markdown с форматированием"""
     CSS = """
-    #md-viewer {
-        width: 95%;
-        height: 90%;
-        border: solid $accent;
-        padding: 1;
-    }
-    #md-content {
-        width: 100%;
-    }
-    """
+       #md-viewer {
+           width: 95%;
+           height: 90%;
+           border: solid $accent;
+           padding: 1;
+       }
+       #md-content {
+           width: 100%;
+       }      
+       """
 
     def __init__(self, content: str):
         super().__init__()
         self.content = self.sanitize_markdown(content)
 
     def sanitize_markdown(self, text: str) -> str:
-        """Очистка Markdown от проблемных символов"""
-        text = text.replace("[", "(").replace("]", ")")
-
+        """Очистка Markdown от ANSI кодов и проблемных символов"""
         text = text.replace("[/]", "").replace("[red]", "").replace("[green]", "")
-
-        lines = []
-        for line in text.splitlines():
-            if line.startswith("# "):
-                lines.append(f"=== {line[2:]} ===")
-            elif line.startswith("## "):
-                lines.append(f"--- {line[3:]} ---")
-            elif line.startswith("### "):
-                lines.append(f"{line[4:]}")
-            else:
-                lines.append(line)
-
-        return "\n".join(lines)
+        return text
 
     def compose(self) -> ComposeResult:
         yield ScrollableContainer(
-            Static(self.content, id="md-content"),
+            TextualMarkdown(self.content, id="md-content"),
             id="md-viewer"
         )
         yield Button("Закрыть", id="close-md")
@@ -228,8 +221,6 @@ class MarkdownViewer(Screen):
     @on(Button.Pressed, "#close-md")
     def close_viewer(self):
         self.app.pop_screen()
-
-
 
 
 class OFPTUI(App):
@@ -265,6 +256,8 @@ class OFPTUI(App):
         ("q", "quit", "Выход"),
     ]
 
+
+
     def compose(self) -> ComposeResult:
         yield Header()
         yield Container(
@@ -291,7 +284,7 @@ class OFPTUI(App):
 
         project_screen = PathInputScreen(
             "Путь к проекту:",
-            utils.load_config().get('project_path', os.getcwd())
+            utils.load_config().get('project_path')
         )
 
         def handle_project_path(project_path: str | None) -> None:
@@ -335,9 +328,15 @@ class OFPTUI(App):
 
         try:
             path = commands.open_output_file()
+
+            if not path:
+                content.update("[red]Документация не найдена![/]")
+                return
+
             content.update(f"[green]Документация открыта:[/]\n{path}")
         except Exception as e:
             content.update(f"[red]Ошибка:[/] {str(e)}")
+
 
     @on(Button.Pressed, "#open-config")
     async def on_open_config(self):
@@ -345,8 +344,13 @@ class OFPTUI(App):
         content = self.query_one("#content")
         content.update("Попытка открыть конфиг...")
         try:
-            commands.open_config_file()
-            content.update("[green]Конфиг открыт в ассоциированном приложении[/]")
+            path = commands.open_config_file()
+
+            if not path:
+                content.update("[red]Конфиг не найден![/]")
+                return
+
+            content.update(f"[green]Конфиг открыт в {path}[/]")
         except Exception as e:
             content.update(f"[red]Ошибка: {str(e)}[/]")
 
@@ -377,6 +381,12 @@ class OFPTUI(App):
         """Открыть Markdown в отдельном экране"""
         try:
             path = commands.open_output_file(False)
+
+            if not path:
+                content = self.query_one("#content")
+                content.update("[red]Документация не найдена![/]")
+                return
+
             if path and os.path.exists(path):
                 with open(path, 'r', encoding='utf-8') as f:
                     content = f.read()
