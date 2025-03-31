@@ -73,7 +73,8 @@ def parse_args():
             args = sys.argv[2:]
             doc_file = ' '.join(args[:-1]).strip('"\'')
             target_dir = args[-1].strip('"\'')
-            commands.unpack(doc_file, target_dir)
+            sec, text = commands.unpack(doc_file, target_dir)
+            print(text)
             sys.exit(0)
         elif "pwd" in sys.argv[1:]:
 

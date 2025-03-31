@@ -20,12 +20,13 @@ from program.commands import (
 )
 import program.commands as commands
 
+
 class ConfigEditor(Screen):
     """Экран редактирования конфигурации"""
     CSS = """
     #config-container {
         width: 80%;
-        height: 80%;
+        height: 100%;
         margin: 1;
         border: solid $accent;
         padding: 1;
@@ -55,7 +56,6 @@ class ConfigEditor(Screen):
     def save_config(self):
         editor = self.query_one("#config-editor")
         try:
-            # Валидация JSON
             json.loads(editor.text)
             config_path = utils.get_config_path()
             with open(config_path, 'w', encoding='utf-8') as f:
@@ -71,14 +71,27 @@ class ConfigEditor(Screen):
 
 
 class PathInputScreen(Screen):
-    """Экран ввода пути"""
     CSS = """
     #path-container {
         width: 80%;
-        height: 30%;
+        height: 24;
+        min-height: 24; 
         margin: 1;
         border: solid $accent;
-        padding: 1;
+        padding: 2;
+    }
+    
+    Static {
+        width: 100%;
+        margin-bottom: 1;
+    }
+    Input {
+        width: 100%;
+        margin-bottom: 2;
+    }
+    Button {
+        width: 20%;
+        margin: 1 2;
     }
     """
 
@@ -111,10 +124,23 @@ class UnpackScreen(Screen):
     CSS = """
     #unpack-container {
         width: 80%;
-        height: 40%;
+        height: auto;
+        min-height: 16;
         margin: 1;
         border: solid $accent;
-        padding: 1;
+        padding: 2;
+    }
+    #unpack-container > Static {
+        width: 100%;
+        margin-bottom: 1;
+    }
+    #unpack-container > Input {
+        width: 100%;
+        margin-bottom: 2;
+    }
+    #unpack-container > Button {
+        width: 40%;
+        margin: 1 2;
     }
     """
 
@@ -139,15 +165,26 @@ class UnpackScreen(Screen):
             return
 
         try:
-            result = unpack(doc_path, target_path)
-            self.notify(result, severity="success")
+            result, text = unpack(doc_path, target_path)
+
+            # Получаем доступ к главному контенту
+            content = self.app.query_one("#content")
+
+            clean_text = commands.ansi_to_textual(text)
+            content.update(clean_text)
+
             self.app.pop_screen()
         except Exception as e:
-            self.notify(f"Ошибка: {str(e)}", severity="error")
+            error_message = str(e)
+            content = self.app.query_one("#content")
+            content.update(f"[red]Ошибка:[/] {error_message}")
+            self.app.pop_screen()
+
 
     @on(Button.Pressed, "#cancel-unpack")
     def cancel_unpack(self):
         self.app.pop_screen()
+
 
 
 class OFPTUI(App):
@@ -155,21 +192,27 @@ class OFPTUI(App):
     CSS = """
     Screen {
         layout: vertical;
+        align: center middle;
     }
     #buttons {
         layout: horizontal;
         width: 100%;
         height: 10%;
         margin-bottom: 1;
+        align: center middle;
     }
     #content {
-        width: 100%;
-        height: 90%;
+        width: 95%;
+        height: 85%;
         border: solid $accent;
         padding: 1;
     }
     Button {
-        margin: 1;
+        min-width: 10;
+        margin: 1 2;
+    }
+    Input {
+        width: 100%;
     }
     """
 
@@ -194,35 +237,49 @@ class OFPTUI(App):
     def action_quit(self):
         self.exit()
 
+    @on(Button.Pressed, "#generate")
+    async def on_generate(self):
+        """Генерация документации"""
+        content = self.query_one("#content")
+        content.update("Подготовка к генерации...")
 
-    async def get_path_input(self, title: str, default: str = "") -> Optional[str]:
-        """Универсальный метод для ввода пути"""
-        screen = PathInputScreen(title, default)
-        result = await self.push_screen_wait(screen)
-        return result if result else None
-    #
-    # @on(Button.Pressed, "#generate")
-    # async def on_generate(self):
-    #     """Генерация документации"""
-    #     content = self.query_one("#content")
-    #     content.update("Подготовка к генерации...")
-    #
-    #     project_path = await self.get_path_input(
-    #         "Путь к проекту:",
-    #         utils.load_config().get('project_path', os.getcwd())
-    #     )
-    #     if not project_path:
-    #         return
-    #
-    #     default_output = utils.load_config().get('output_path',
-    #                                              str(Path(project_path) / "project_documentation.md"))
-    #     output_path = await self.get_path_input("Путь для сохранения:", default_output)
-    #     if not output_path:
-    #         return
-    #
-    #     content.update("Идёт генерация документации...")
-    #     result = generate_documentation(project_path, output_path)
-    #     content.update(result)
+        project_screen = PathInputScreen(
+            "Путь к проекту:",
+            utils.load_config().get('project_path', os.getcwd())
+        )
+
+        def handle_project_path(project_path: str | None) -> None:
+            if not project_path:
+                content.update("Отменено")
+                return
+
+            project_path_obj = Path(project_path)
+            default_output = str(project_path_obj / "project_documentation.md")
+
+            output_screen = PathInputScreen("Путь для сохранения:", default_output)
+
+            def handle_output_path(output_path: str | None) -> None:
+                if not output_path:
+                    content.update("Отменено")
+                    return
+
+                content.update("Идёт генерация документации...")
+                try:
+                    result = generate_documentation(project_path, output_path)
+                    clean_result = commands.ansi_to_textual(result)
+                    content.update(f"Генерация завершена!\n{clean_result}")
+
+                    config = utils.load_config()
+                    config['project_path'] = project_path
+                    config['output_path'] = output_path
+                    utils.save_config(config)
+
+                except Exception as e:
+                    content.update(f"Ошибка генерации: {str(e)}")
+
+            self.push_screen(output_screen, handle_output_path)
+
+        self.push_screen(project_screen, handle_project_path)
 
     @on(Button.Pressed, "#open_doc")
     async def open_documentation(self) -> None:
@@ -252,34 +309,21 @@ class OFPTUI(App):
         """Редактирование конфига"""
         await self.push_screen(ConfigEditor())
 
-    # @on(Button.Pressed, "#unpack")
-    # async def on_unpack(self):
-    #     """Распаковка проекта"""
-    #     await self.push_screen(UnpackScreen())
+    @on(Button.Pressed, "#unpack")
+    async def on_unpack(self):
+        """Распаковка проекта"""
+        await self.push_screen(UnpackScreen())
 
-    @staticmethod
-    def ansi_to_textual(text: str) -> str:
-        """Конвертирует ANSI-цвета в Textual-разметку"""
-        color_map = {
-            '\x1b[35m': '[magenta]',
-            '\x1b[36m': '[cyan]',
-            '\x1b[0m': '[/]'
-        }
-        for ansi, textual in color_map.items():
-            text = text.replace(ansi, textual)
-        return text
+
 
     @on(Button.Pressed, "#info")
     async def on_info(self):
         content = self.query_one("#content")
         try:
-            info = self.ansi_to_textual(commands.print_project_info())
+            info = commands.ansi_to_textual(commands.print_project_info())
             content.update(info)
         except Exception as e:
             content.update("Error loading info")
-
-
-
 
 
 def run_tui():

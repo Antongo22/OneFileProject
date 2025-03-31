@@ -43,19 +43,19 @@ def print_project_info() -> str:
 """
 
 
-def unpack(doc_file: str, target_dir: str):
+def unpack(doc_file: str, target_dir: str) -> (bool, Optional[str]):
     """Распаковывает проект из файла документации"""
+
+    res = ""
     try:
         doc_path = Path(doc_file.strip('"\''))
         target_path = Path(target_dir.strip('"\''))
 
         if not doc_path.exists():
-            print(utils.color_text(f"Error: The documentation file '{doc_path}' was not found", 'error'))
-            return False
+            return False, utils.color_text(f"Error: The documentation file '{doc_path}' was not found", 'error')
 
         if target_path.exists() and any(target_path.iterdir()):
-            print(utils.color_text(f"Error: The target directory '{target_path}' is not empty", 'error'))
-            return False
+            return False, utils.color_text(f"Error: The target directory '{target_path}' is not empty", 'error')
 
         target_path.mkdir(parents=True, exist_ok=True)
 
@@ -69,8 +69,7 @@ def unpack(doc_file: str, target_dir: str):
         )
 
         if not structure_match:
-            print(utils.color_text("Error: The section with the project structure was not found.", 'error'))
-            return False
+            return False,utils.color_text("Error: The section with the project structure was not found.", 'error')
 
         first_line = structure_match.group(1).split('\n')[0].strip()
         root_folder_name = first_line.split('/')[0].rstrip('\\/')
@@ -96,13 +95,13 @@ def unpack(doc_file: str, target_dir: str):
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(file_content)
             except Exception as e:
-                print(utils.color_text(f"⚠️ Failed to create {rel_path} file: {str(e)}", 'warning'))
+                 res += utils.color_text(f"⚠️ Failed to create {rel_path} file: {str(e)}", 'warning') + "\n"
 
-        print(utils.color_text(f"✅ The project has been successfully unpacked in: {target_path}", 'success'))
-        return True
+        res += utils.color_text(f"✅ The project has been successfully unpacked in: {target_path}", 'success') + "\n"
+        return True, res
     except Exception as e:
-        print(utils.color_text(f"❌ Unpacking error: {str(e)}", 'error'))
-        return False
+        res += utils.color_text(f"❌ Unpacking error: {str(e)}", 'error')
+        return False, res
 
 
 def open_output_file() -> Optional[Path]:
@@ -303,11 +302,9 @@ def generate_documentation(project_path: str, output_path: str, config: Optional
     import os
     from program import utils
 
-    # Загружаем конфиг если не передан
     if config is None:
         config = utils.load_config()
 
-    # Проверяем пути
     if not project_path:
         return utils.color_text("Error: Project path is required!", 'error')
 
@@ -347,3 +344,21 @@ def generate_documentation(project_path: str, output_path: str, config: Optional
 
     except Exception as e:
         return utils.color_text(f"\nError: {str(e)}", 'error')
+
+
+def ansi_to_textual(text: str) -> str:
+    """Конвертирует ANSI-цвета в Textual-разметку"""
+    color_map = {
+        '\x1b[31m': '[red]',
+        '\x1b[32m': '[green]',
+        '\x1b[33m': '[yellow]',
+        '\x1b[34m': '[blue]',
+        '\x1b[35m': '[magenta]',
+        '\x1b[36m': '[cyan]',
+        '\x1b[0m': '[/]',
+        '\x1b[1m': '[b]',
+        '\x1b[4m': '[u]'
+    }
+    for ansi, textual in color_map.items():
+        text = text.replace(ansi, textual)
+    return text
