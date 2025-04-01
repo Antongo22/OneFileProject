@@ -5,6 +5,7 @@ import subprocess
 import stat
 from pathlib import Path
 import program.config_utils as cfg
+import time
 
 PROGRAM_NAME = "ofp"
 PROGRAM_FILES_DIR = "OFP_Documenter"
@@ -138,38 +139,65 @@ def update():
             shutil.rmtree(temp_dir, onerror=handle_remove_readonly)
 
         print(f"🔄 Cloning repository (current version: {current_version})...")
-        subprocess.run(["git", "clone", REPO_URL, temp_dir],
-                       check=True,
-                       stdout=subprocess.PIPE,
-                       stderr=subprocess.PIPE)
+        subprocess.run(["git", "clone", "--depth", "1", REPO_URL, temp_dir],
+                      check=True,
+                      stdout=subprocess.PIPE,
+                      stderr=subprocess.PIPE)
 
+        # Получаем новую версию
         version_file = temp_dir / "data/version"
         new_version = "unknown"
         if version_file.exists():
             with open(version_file, 'r') as f:
                 new_version = f.read().strip()
 
+        # Удаляем .git чтобы не было конфликтов
         git_dir = temp_dir / ".git"
         if git_dir.exists():
             shutil.rmtree(git_dir, onerror=handle_remove_readonly)
 
-        shutil.rmtree(install_dir, onerror=handle_remove_readonly)
+        # Закрываем все возможные файловые дескрипторы venv
+        if sys.platform == "win32":
+            subprocess.run(["taskkill", "/f", "/im", "python.exe"],
+                          stderr=subprocess.DEVNULL,
+                          stdout=subprocess.DEVNULL)
 
+        # Удаляем старую версию (с дополнительными попытками)
+        def force_remove():
+            for _ in range(3):  # 3 попытки
+                try:
+                    shutil.rmtree(install_dir, onerror=handle_remove_readonly)
+                    return True
+                except Exception as e:
+                    print(f"⚠️ Retrying remove... ({str(e)})")
+                    time.sleep(1)
+            return False
+
+        if not force_remove():
+            raise Exception("Failed to remove old version after 3 attempts")
+
+        # Переносим новую версию
         shutil.move(temp_dir, install_dir)
 
+        # Пересоздаем venv с повышенными правами
         print("🔄 Recreating virtual environment...")
-        setup_venv(install_dir)
+        try:
+            setup_venv(install_dir)
+        except Exception as e:
+            print(f"⚠️ Retrying venv creation... ({str(e)})")
+            setup_venv(install_dir)  # Повторная попытка
 
         print(f"✅ Successfully updated from {current_version} to {new_version}!")
 
     except subprocess.CalledProcessError as e:
         print(f"❌ Git error: {e.stderr.decode().strip()}")
     except Exception as e:
-        print(f"❌ Update error: {str(e)}")
+        print(f"❌ Critical update error: {str(e)}")
+        print("💡 Try running as Administrator or manually delete:")
+        print(f"   {get_install_dir()}")
     finally:
         if temp_dir and temp_dir.exists():
             shutil.rmtree(temp_dir, ignore_errors=True)
-
 
 def uninstall():
     """Полностью удаляет программу"""
