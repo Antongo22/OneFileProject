@@ -25,6 +25,34 @@ def get_install_dir():
     else:
         return Path.home() / ".local" / "lib" / PROGRAM_FILES_DIR.lower()
 
+
+def install_dependencies(install_dir):
+    """Устанавливает зависимости из requirements.txt"""
+    requirements = install_dir / "requirements.txt"
+    if not requirements.exists():
+        print("⚠️ requirements.txt not found, skipping dependencies installation")
+        return
+
+    print("🔄 Installing dependencies from requirements.txt...")
+    try:
+        if sys.platform == "win32":
+            python_exec = sys.executable
+        else:
+            python_exec = "python3"
+
+        subprocess.run(
+            [python_exec, "-m", "pip", "install", "-r", str(requirements)],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
+        )
+        print("✅ Dependencies installed successfully")
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Failed to install dependencies: {e.stderr.decode().strip()}")
+    except Exception as e:
+        print(f"❌ Error installing dependencies: {str(e)}")
+
+
 def update():
     """Обновляет программу через git pull с выводом информации о версиях"""
     temp_dir = None
@@ -57,6 +85,8 @@ def update():
         shutil.rmtree(install_dir, onerror=handle_remove_readonly)
         shutil.move(temp_dir, install_dir)
 
+        install_dependencies(install_dir)
+
         print(f"✅ The program has been successfully updated from {current_version} to {new_version}!")
 
     except subprocess.CalledProcessError as e:
@@ -69,6 +99,7 @@ def update():
                 shutil.rmtree(temp_dir, onerror=handle_remove_readonly)
             except Exception:
                 pass
+
 
 def install():
     """Устанавливает программу в пользовательскую директорию"""
@@ -86,6 +117,8 @@ def install():
                     shutil.copytree(item, dest, dirs_exist_ok=True)
                 else:
                     shutil.copy2(item, dest)
+
+        install_dependencies(install_dir)
 
         if sys.platform == "win32":
             bin_path = Path.home() / "AppData" / "Local" / "Microsoft" / "WindowsApps"
@@ -122,7 +155,6 @@ def install():
     except Exception as e:
         print(f"\n❌ Installation error: {e}")
         sys.exit(1)
-
 
 
 def uninstall():
