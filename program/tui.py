@@ -29,6 +29,10 @@ class ConfigEditor(Screen):
         width: 100%;
         height: 80%;
     }
+    Button {
+        width: 20%;
+        margin: 1 2;
+    }
     """
 
     def compose(self) -> ComposeResult:
@@ -140,7 +144,7 @@ class UnpackScreen(Screen):
         margin-bottom: 2;
     }
     #unpack-container > Button {
-        width: 40%;
+        width: 20%;
         margin: 1 2;
     }
     """
@@ -168,7 +172,6 @@ class UnpackScreen(Screen):
         try:
             result, text = commands.unpack(doc_path, target_path)
 
-            # Получаем доступ к главному контенту
             content = self.app.query_one("#content")
 
             clean_text = commands.ansi_to_textual(text)
@@ -226,31 +229,32 @@ class MarkdownViewer(Screen):
 class OFPTUI(App):
     """Главный TUI интерфейс"""
     CSS = """
-    Screen {
-        layout: vertical;
-        align: center middle;
-    }
-    #buttons {
-        layout: horizontal;
-        width: 100%;
-        height: 10%;
-        margin-bottom: 1;
-        align: center middle;
-    }
-    #content {
-        width: 95%;
-        height: 85%;
-        border: solid $accent;
-        padding: 1;
-    }
-    Button {
-        min-width: 10;
-        margin: 1 2;
-    }
-    Input {
-        width: 100%;
-    }
-    """
+        Screen {
+            layout: vertical;
+            align: center middle;
+        }
+        #buttons {
+            layout: horizontal;
+            width: 100%;
+            height: auto;
+            margin: 1 0;
+            align: center middle;
+        }
+        #content {
+            width: 95%;
+            height: 85%;
+            border: solid $accent;
+            padding: 1;
+        }
+        Button {
+            width: 20;
+            height: 3;
+            margin: 0 1;
+        }
+        Input {
+            width: 100%;
+        }
+        """
 
     BINDINGS = [
         ("q", "quit", "Выход"),
