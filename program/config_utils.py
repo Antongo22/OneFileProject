@@ -6,7 +6,8 @@ VERSION_FILE=f'{PREFIX}/version'
 
 PROGRAM_NAME = "ofp"
 CONFIG_FILE = "project_documenter_config.json"
-LATEST_PATHS_FILE = str(Path(__file__).parent / f"{PREFIX}/latest_paths.json")
+LATEST_CONFIG_FILE = str(Path(__file__).parent / f"{PREFIX}/latest_config.json")
+
 
 def get_version():
     """Получает версию из файла version или возвращает v0.0.0 при ошибке"""
@@ -87,4 +88,8 @@ DEFAULT_CONFIG = {
     'ignore_paths': [],
     'whitelist_paths': [],
     'show_hidden': False
+}
+
+DEFAULT_LATEST_CONFIG = {
+    'language': 'en'
 }

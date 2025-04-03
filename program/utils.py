@@ -10,34 +10,43 @@ init(autoreset=True)
 
 
 
-def save_latest_paths(output_path: str):
-    """Сохраняет пути к последним использованным файлам"""
+def save_latest_paths(output_path: str, config: dict):
+    """Сохраняет пути к последним использованным файлам и настройки"""
     output_dir = Path(output_path).parent
 
     config_in_output_dir = str(output_dir / "project_documenter_config.json")
 
-    latest_paths = {
+    latest_config = {
         'config_path': config_in_output_dir,
-        'output_path': output_path
+        'output_path': output_path,
+        'language': config.get('language', 'en')
     }
-
-    print(f"Saving latest paths: {latest_paths}")
 
     try:
         output_dir.mkdir(parents=True, exist_ok=True)
-
-        with open(cfg.LATEST_PATHS_FILE, 'w', encoding='utf-8') as f:
-            json.dump(latest_paths, f, indent=2)
-
+        with open(cfg.LATEST_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(latest_config, f, indent=2)
     except Exception as e:
-        print(color_text(f"Error saving latest paths: {str(e)}", 'error'))
+        print(color_text(f"Error saving latest config: {str(e)}", 'error'))
+
+
+def load_latest_config() -> dict:
+    """Загружает последние использованные настройки"""
+    try:
+        if os.path.exists(cfg.LATEST_CONFIG_FILE):
+            with open(cfg.LATEST_CONFIG_FILE, 'r', encoding='utf-8') as f:
+                return {**cfg.DEFAULT_LATEST_CONFIG, **json.load(f)}
+        return cfg.DEFAULT_LATEST_CONFIG.copy()
+    except Exception as e:
+        print(color_text(f"Error loading latest config: {str(e)}", 'error'))
+        return cfg.DEFAULT_LATEST_CONFIG.copy()
 
 
 def load_latest_paths() -> dict:
     """Загружает последние использованные пути из директории программы"""
     try:
-        if os.path.exists(cfg.LATEST_PATHS_FILE):
-            with open(cfg.LATEST_PATHS_FILE, 'r', encoding='utf-8') as f:
+        if os.path.exists(cfg.LATEST_CONFIG_FILE):
+            with open(cfg.LATEST_CONFIG_FILE, 'r', encoding='utf-8') as f:
                 return json.load(f)
         return {}
     except Exception as e:

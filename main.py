@@ -26,7 +26,7 @@ signal.signal(signal.SIGINT, handle_ctrl_c)
 
 def parse_args():
     """Разбирает аргументы командной строки с проверкой существования папки"""
-    lang = 'en'
+    lang = utils.load_latest_config().get('language', 'en')
     project_path = None
 
     if len(sys.argv) > 1:
@@ -83,12 +83,21 @@ def parse_args():
         elif "tui" in sys.argv[1:]:
             run_tui()
             sys.exit(0)
+        elif "lang" in sys.argv[1:]:
+            if len(sys.argv) > 2 and sys.argv[2] in ['en', 'ru']:
+                success, message = commands.change_language(sys.argv[2])
+                print(utils.color_text(message, 'success' if success else 'error'))
+            elif len(sys.argv) == 2:
+                print(utils.color_text(f"Current language: {lang}", 'info'))
+            else:
+                print(utils.color_text("Usage: ofp lang [en|ru]", 'error'))
+            sys.exit(0)
 
         if len(sys.argv) > 1 and sys.argv[1] == ".":
             project_path = os.getcwd()
         elif len(sys.argv) > 1 and not sys.argv[1].startswith('-'):
             if sys.argv[1] not in ["unpack", "open", "conf", "reset", "redo", "update", "uninstall",
-                                   "version", "info", "pwd", "tui"]:
+                                   "version", "info", "pwd", "tui", "lang"]:
                 potential_path = sys.argv[1]
                 if not os.path.exists(potential_path):
                     print(utils.color_text(f"Error: Path '{potential_path}' does not exist!", 'error'))

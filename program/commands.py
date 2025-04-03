@@ -338,7 +338,7 @@ def generate_documentation(project_path: str, output_path: str, config: Optional
             f.write(md_content)
 
         utils.save_config(config)
-        utils.save_latest_paths(str(output_path_obj))
+        utils.save_latest_paths(str(output_path_obj), utils.load_latest_config())
 
         result = (
             f"{utils.color_text('Documentation generated successfully!', 'success')}\n"
@@ -367,3 +367,18 @@ def ansi_to_textual(text: str) -> str:
     for ansi, textual in color_map.items():
         text = text.replace(ansi, textual)
     return text
+
+
+def change_language(lang: str):
+    """Меняет язык интерфейса"""
+    if lang not in ['en', 'ru']:
+        return False, "Invalid language. Use 'en' or 'ru'"
+
+    try:
+        latest_config = utils.load_latest_config()
+        latest_config['language'] = lang
+        with open(cfg.LATEST_CONFIG_FILE, 'w', encoding='utf-8') as f:
+            json.dump(latest_config, f, indent=2)
+        return True, f"Language changed to {lang}"
+    except Exception as e:
+        return False, f"Error changing language: {str(e)}"
