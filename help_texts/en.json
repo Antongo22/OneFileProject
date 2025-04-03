@@ -5,6 +5,7 @@
     "reset_opts": "Options for 'reset':",
     "examples": "Examples:",
     "commands_list": [
+        ["tui", "Opens the terminal interface"],
         [".", "Document current directory (default)"],
         ["<dir_path>", "Create documentation for specified directory"],
         ["open", "Open output file in default application"],
