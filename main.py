@@ -8,10 +8,11 @@ import installer
 import program.utils as utils
 import program.commands as commands
 from program.tui import run_tui
+from program.translator import translator
 
 init(autoreset=True)
 
-
+translator.set_language(utils.load_latest_config().get('language', 'en'))
 
 
 def handle_ctrl_c(signum, frame):

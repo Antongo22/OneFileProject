@@ -7,6 +7,7 @@ from pathlib import Path
 import re
 import program.config_utils as cfg
 from typing import Optional
+from program.translator import translator
 
 LANG_PATH = "../help_texts"
 
@@ -36,7 +37,7 @@ def print_help(lang='en'):
 def print_project_info() -> str:
     """Выводит информацию о проекте с цветным оформлением"""
     return f"""
-{utils.color_text("Project Information:", 'info')}
+{utils.color_text(translator.translate("common.information", ), 'info')}
 {utils.color_text("Author:", 'info')} {utils.color_text("Anton Aleynichenko - https://aleynichenko.ru", 'highlight')}
 {utils.color_text("Repository:", 'info')} {utils.color_text("https://github.com/Antongo22/OneFileProject", 'highlight')}
 {utils.color_text("Version:", 'info')} {utils.color_text(cfg.VERSION, 'highlight')}
