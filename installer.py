@@ -131,10 +131,13 @@ def install():
             bin_path = Path.home() / ".local" / "bin"
             bin_path.mkdir(exist_ok=True)
             target_path = bin_path / PROGRAM_NAME
-            if target_path.exists():
-                target_path.unlink()
-            os.symlink(install_dir / "main.py", target_path)
-            os.chmod(install_dir / "main.py", 0o755)
+
+            with open(target_path, 'w') as f:
+                f.write(f"""#!/bin/bash
+python3 "{install_dir / 'main.py'}" "$@"
+        """)
+
+            os.chmod(target_path, 0o755)
 
         print(f"\n✅ The installation is complete! Now use the command '{PROGRAM_NAME}'")
 
@@ -155,6 +158,9 @@ def install():
     except Exception as e:
         print(f"\n❌ Installation error: {e}")
         sys.exit(1)
+
+
+
 
 
 def uninstall():
