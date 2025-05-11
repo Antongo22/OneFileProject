@@ -63,7 +63,7 @@ def parse_args():
             commands.redo_documentation()
             sys.exit(0)
         elif "version" in sys.argv[1:]:
-            version_text = translator.translate('common.version', default='Version {version}', version=cfg.VERSION)
+            version_text = translator.translate('common.version') + ": " + cfg.VERSION
             print(f"{utils.color_text(version_text, 'highlight')}")
             sys.exit(0)
         elif "info" in sys.argv[1:]:
