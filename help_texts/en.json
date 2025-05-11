@@ -2,7 +2,8 @@
     "title": "OFP - Project Documentation Generator",
     "usage": "Usage:",
     "commands": "Commands:",
-    "reset_opts": "Options for 'reset':",
+    "options_for_command": "Options:",
+    "global_opts": "Global options:",
     "examples": "Examples:",
     "commands_list": [
         ["tui", "Opens the terminal interface"],
@@ -19,11 +20,13 @@
         ["info", "Show project information"],
         ["pwd", "Show current directory"]
     ],
-    "options_list": [
-        ["-c", "Reset only config file"],
-        ["-o", "Reset only output file"],
-        ["-ru", "Show help in Russian"],
-        ["-en", "Show help in English"]
+    "command_options": [
+        ["reset", ["-c", "Reset only config file"], ["-o", "Reset only output file"]],
+        ["help", ["-ru", "Show help in Russian"], ["-en", "Show help in English"]],
+        ["unpack", ["<doc_file>", "Path to the documentation file"], ["<target_dir>", "Path to the target directory"]]
+    ],
+    "global_options": [
+        ["-h, --help", "Show this help message"]
     ],
     "examples_list": [
         ["ofp .", "Document current directory"],

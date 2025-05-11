@@ -24,11 +24,43 @@ def print_help(lang='en'):
 {utils.color_text(texts['usage'], 'info')}
     {cfg.PROGRAM_NAME} [command] [options]
 {utils.color_text(texts['commands'], 'info')}"""
-        for cmd, desc in texts['commands_list']:
-            help_text += f"\n    {utils.color_text(cmd, 'path')}{' ' * (20 - len(cmd))}{desc}"
+
+        # Создаем словарь флагов для каждой команды
+        command_flags = {}
+        for cmd_info in texts.get('command_options', []):
+            if len(cmd_info) >= 2:
+                cmd_name = cmd_info[0]
+                flags = cmd_info[1:]
+                command_flags[cmd_name] = flags
+                
+        # Выводим команды и их флаги
+        for cmd_info in texts['commands_list']:
+            cmd, desc = cmd_info
+            max_pad = 20
+            cmd_pad = max(max_pad - len(cmd), 1)
+            help_text += f"\n    {utils.color_text(cmd, 'path')}{' ' * cmd_pad}{desc}"
+            
+            # Добавляем флаги для этой команды, если они есть
+            if cmd in command_flags and command_flags[cmd]:
+                help_text += f"\n      {utils.color_text(texts.get('options_for_command', 'Options:'), 'info')}"
+                for flag_info in command_flags[cmd]:
+                    if len(flag_info) >= 2:
+                        flag, flag_desc = flag_info
+                        flag_pad = max(max_pad - len(flag) - 4, 1)
+                        help_text += f"\n        {utils.color_text(flag, 'path')}{' ' * flag_pad}{flag_desc}"
+
+        # Добавляем общие флаги, если они есть
+        if 'global_options' in texts and texts['global_options']:
+            help_text += f"\n\n{utils.color_text(texts.get('global_opts', 'Global options:'), 'info')}"
+            for opt, desc in texts['global_options']:
+                opt_pad = max(max_pad - len(opt), 1)
+                help_text += f"\n    {utils.color_text(opt, 'path')}{' ' * opt_pad}{desc}"
+            
         help_text += f"\n\n{utils.color_text(texts['examples'], 'info')}"
         for ex, desc in texts['examples_list']:
-            help_text += f"\n    {utils.color_text(ex, 'highlight')}{' ' * (30 - len(ex))}{desc}"
+            ex_pad = max(30 - len(ex), 1)
+            help_text += f"\n    {utils.color_text(ex, 'highlight')}{' ' * ex_pad}{desc}"
+            
         print(f"\n{help_text}\n")
     except Exception as e:
         print(utils.color_text(f"\n{translator.translate('commands.loading_help_error', error=str(e))}\n", 'error'))
