@@ -17,7 +17,7 @@ translator.set_language(utils.load_latest_config().get('language', 'en'))
 
 def handle_ctrl_c(signum, frame):
     """Обработка нажатия Ctrl+C"""
-    print(utils.color_text("\n\nOperation cancelled by user", 'warning'))
+    print(utils.color_text(f"\n\n{translator.translate('common.canceled')}", 'warning'))
     sys.exit(1)
 
 
@@ -38,6 +38,8 @@ def parse_args():
             lang = 'en'
             sys.argv.remove('-en')
 
+        translator.set_language(lang)
+
         if any(x in sys.argv[1:] for x in ("-h", "--help", "help", "помощь")):
             commands.print_help(lang)
             sys.exit(0)
@@ -45,7 +47,7 @@ def parse_args():
             installer.uninstall()
             sys.exit(0)
         elif "update" in sys.argv[1:]:
-            print(utils.color_text("❗️ The entire cache will be cleared!", 'warning'))
+            print(utils.color_text(translator.translate('commands.cache_warning'), 'warning'))
             installer.update()
             sys.exit(0)
         elif "open" in sys.argv[1:]:
@@ -61,15 +63,15 @@ def parse_args():
             commands.redo_documentation()
             sys.exit(0)
         elif "version" in sys.argv[1:]:
-            print(f"Current version: {utils.color_text(cfg.VERSION, 'highlight')}")
+            version_text = translator.translate('common.version', default='Version {version}', version=cfg.VERSION)
+            print(f"{utils.color_text(version_text, 'highlight')}")
             sys.exit(0)
         elif "info" in sys.argv[1:]:
             print(commands.print_project_info())
             sys.exit(0)
         elif "unpack" in sys.argv[1:]:
             if len(sys.argv) < 4:
-                print(utils.color_text("Error: unpack requires 2 arguments - the documentation file and the target folder",
-                                 'error'))
+                print(utils.color_text(translator.translate('commands.unpack_required_args'), 'error'))
                 sys.exit(1)
             args = sys.argv[2:]
             doc_file = ' '.join(args[:-1]).strip('"\'')
@@ -78,8 +80,7 @@ def parse_args():
             print(text)
             sys.exit(0)
         elif "pwd" in sys.argv[1:]:
-
-            print(utils.color_text(f"Current working directory: {Path(__file__).parent}", 'info'))
+            print(utils.color_text(f"{translator.translate('commands.current_working_directory', default='Current working directory')}: {Path(__file__).parent}", 'info'))
             sys.exit(0)
         elif "tui" in sys.argv[1:]:
             run_tui()
@@ -89,9 +90,14 @@ def parse_args():
                 success, message = commands.change_language(sys.argv[2])
                 print(utils.color_text(message, 'success' if success else 'error'))
             elif len(sys.argv) == 2:
-                print(utils.color_text(f"Current language: {lang}", 'info'))
+                # Просто выводим текущий язык без перевода
+                if lang == "en":
+                    lang_text = "Current language: " + lang
+                else:
+                    lang_text = "Текущий язык: " + lang
+                print(utils.color_text(lang_text, 'info'))
             else:
-                print(utils.color_text("Usage: ofp lang [en|ru]", 'error'))
+                print(utils.color_text(translator.translate('commands.usage'), 'error'))
             sys.exit(0)
 
         if len(sys.argv) > 1 and sys.argv[1] == ".":
@@ -101,10 +107,10 @@ def parse_args():
                                    "version", "info", "pwd", "tui", "lang"]:
                 potential_path = sys.argv[1]
                 if not os.path.exists(potential_path):
-                    print(utils.color_text(f"Error: Path '{potential_path}' does not exist!", 'error'))
+                    print(utils.color_text(translator.translate('commands.path_not_exists', path=potential_path), 'error'))
                     sys.exit(1)
                 if not os.path.isdir(potential_path):
-                    print(utils.color_text(f"Error: '{potential_path}' is not a directory!", 'error'))
+                    print(utils.color_text(translator.translate('commands.not_directory', path=potential_path), 'error'))
                     sys.exit(1)
                 project_path = os.path.abspath(potential_path)
 

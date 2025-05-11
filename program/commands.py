@@ -31,16 +31,22 @@ def print_help(lang='en'):
             help_text += f"\n    {utils.color_text(ex, 'highlight')}{' ' * (30 - len(ex))}{desc}"
         print(f"\n{help_text}\n")
     except Exception as e:
-        print(utils.color_text(f"\nError loading help: {str(e)}\n", 'error'))
+        print(utils.color_text(f"\n{translator.translate('commands.loading_help_error', error=str(e))}\n", 'error'))
 
 
 def print_project_info() -> str:
     """Выводит информацию о проекте с цветным оформлением"""
+    # Получаем переводы заранее, чтобы избежать проблем с отображением ключей
+    info_title = translator.translate("common.information")
+    author_title = translator.translate("common.author")
+    repo_title = translator.translate("common.repository")
+    version_title = translator.translate("common.version")
+    
     return f"""
-{utils.color_text(translator.translate("common.information", ), 'info')}
-{utils.color_text("Author:", 'info')} {utils.color_text("Anton Aleynichenko - https://aleynichenko.ru", 'highlight')}
-{utils.color_text("Repository:", 'info')} {utils.color_text("https://github.com/Antongo22/OneFileProject", 'highlight')}
-{utils.color_text("Version:", 'info')} {utils.color_text(cfg.VERSION, 'highlight')}
+{utils.color_text(info_title, 'info')}
+{utils.color_text(author_title, 'info')} {utils.color_text("Anton Aleynichenko - https://aleynichenko.ru", 'highlight')}
+{utils.color_text(repo_title, 'info')} {utils.color_text("https://github.com/Antongo22/OneFileProject", 'highlight')}
+{utils.color_text(version_title, 'info')} {utils.color_text(cfg.VERSION, 'highlight')}
 """
 
 
@@ -53,10 +59,10 @@ def unpack(doc_file: str, target_dir: str) -> (bool, Optional[str]):
         target_path = Path(target_dir.strip('"\''))
 
         if not doc_path.exists():
-            return False, utils.color_text(f"Error: The documentation file '{doc_path}' was not found", 'error')
+            return False, utils.color_text(translator.translate("commands.file_not_found", path=doc_path), 'error')
 
         if target_path.exists() and any(target_path.iterdir()):
-            return False, utils.color_text(f"Error: The target directory '{target_path}' is not empty", 'error')
+            return False, utils.color_text(translator.translate("commands.target_not_empty", path=target_path), 'error')
 
         target_path.mkdir(parents=True, exist_ok=True)
 
@@ -70,7 +76,7 @@ def unpack(doc_file: str, target_dir: str) -> (bool, Optional[str]):
         )
 
         if not structure_match:
-            return False,utils.color_text("Error: The section with the project structure was not found.", 'error')
+            return False, utils.color_text(translator.translate("commands.doc_section_not_found"), 'error')
 
         first_line = structure_match.group(1).split('\n')[0].strip()
         root_folder_name = first_line.split('/')[0].rstrip('\\/')
@@ -96,12 +102,12 @@ def unpack(doc_file: str, target_dir: str) -> (bool, Optional[str]):
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(file_content)
             except Exception as e:
-                 res += utils.color_text(f"⚠️ Failed to create {rel_path} file: {str(e)}", 'warning') + "\n"
+                 res += utils.color_text(translator.translate("commands.file_creation_error", file=rel_path, error=str(e)), 'warning') + "\n"
 
-        res += utils.color_text(f"✅ The project has been successfully unpacked in: {target_path}", 'success') + "\n"
+        res += utils.color_text(translator.translate("commands.unpack_success", path=target_path), 'success') + "\n"
         return True, res
     except Exception as e:
-        res += utils.color_text(f"❌ Unpacking error: {str(e)}", 'error')
+        res += utils.color_text(translator.translate("commands.unpack_error", error=str(e)), 'error')
         return False, res
 
 
@@ -295,10 +301,9 @@ def print_header():
                                                      |__/              
     {cfg.PROGRAM_NAME.upper()} {cfg.VERSION}
     """
+    # Заголовок не переводим, так как это ASCII-арт
     print(utils.color_text(header, 'highlight'))
     print(utils.color_text("=" * 60, 'info') + "\n")
-
-
 def generate_documentation(project_path: str, output_path: str, config: Optional[dict] = None) -> str:
     """
     Генерирует документацию проекта и сохраняет в указанный файл
@@ -312,10 +317,10 @@ def generate_documentation(project_path: str, output_path: str, config: Optional
         config = utils.load_config()
 
     if not project_path:
-        return utils.color_text("Error: Project path is required!", 'error')
+        return utils.color_text(translator.translate("commands.project_required"), 'error')
 
     if not os.path.isdir(project_path):
-        return utils.color_text(f"Error: Directory '{project_path}' does not exist!", 'error')
+        return utils.color_text(translator.translate("commands.dir_not_exists", path=project_path), 'error')
 
     try:
         root_path = os.path.normpath(project_path)
@@ -326,10 +331,14 @@ def generate_documentation(project_path: str, output_path: str, config: Optional
 
         tree, files = utils.generate_file_tree(root_path, config)
 
+        # Получаем заголовки из переводчика
+        structure_title = translator.translate('doc.structure_title')
+        files_content_title = translator.translate('doc.files_content_title')
+
         md_content = (
-            f"# Project Structure: {root_name}\n\n"
+            f"# {structure_title}: {root_name}\n\n"
             f"```\n{root_name}/\n{tree}\n```\n\n"
-            f"# Files Content\n\n{utils.get_file_contents(files)}"
+            f"# {files_content_title}\n\n{utils.get_file_contents(files)}"
         )
 
         output_path_obj = Path(output_path)
@@ -342,14 +351,14 @@ def generate_documentation(project_path: str, output_path: str, config: Optional
         utils.save_latest_paths(str(output_path_obj), utils.load_latest_config())
 
         result = (
-            f"{utils.color_text('Documentation generated successfully!', 'success')}\n"
-            f"{utils.color_text(f'Output file: {output_path}', 'path')}\n"
-            f"{utils.color_text(f'Total files processed: {len(files)}', 'info')}"
+            f"{utils.color_text(translator.translate('commands.doc_generated'), 'success')}\n"
+            f"{utils.color_text(translator.translate('commands.output_file', path=output_path), 'path')}\n"
+            f"{utils.color_text(translator.translate('commands.files_processed', count=len(files)), 'info')}"
         )
         return result
 
     except Exception as e:
-        return utils.color_text(f"\nError: {str(e)}", 'error')
+        return utils.color_text(f"\n{translator.translate('common.error')}: {str(e)}", 'error')
 
 
 def ansi_to_textual(text: str) -> str:
@@ -373,13 +382,14 @@ def ansi_to_textual(text: str) -> str:
 def change_language(lang: str):
     """Меняет язык интерфейса"""
     if lang not in ['en', 'ru']:
-        return False, "Invalid language. Use 'en' or 'ru'"
+        return False, translator.translate("commands.invalid_language")
 
     try:
         latest_config = utils.load_latest_config()
         latest_config['language'] = lang
         with open(cfg.LATEST_CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(latest_config, f, indent=2)
-        return True, f"Language changed to {lang}"
+        translator.set_language(lang)  # Устанавливаем язык сразу после смены
+        return True, translator.translate("commands.language_changed", lang=lang)
     except Exception as e:
-        return False, f"Error changing language: {str(e)}"
+        return False, translator.translate("commands.language_change_error", error=str(e))

@@ -5,6 +5,7 @@ from typing import Tuple, Optional
 import fnmatch
 from colorama import init, Style
 import program.config_utils as cfg
+from program.translator import translator
 
 init(autoreset=True)
 
@@ -27,7 +28,7 @@ def save_latest_paths(output_path: str, config: dict):
         with open(cfg.LATEST_CONFIG_FILE, 'w', encoding='utf-8') as f:
             json.dump(latest_config, f, indent=2)
     except Exception as e:
-        print(color_text(f"Error saving latest config: {str(e)}", 'error'))
+        print(color_text(translator.translate('utils.error_saving_latest_config', error=str(e)), 'error'))
 
 
 def load_latest_config() -> dict:
@@ -38,7 +39,7 @@ def load_latest_config() -> dict:
                 return {**cfg.DEFAULT_LATEST_CONFIG, **json.load(f)}
         return cfg.DEFAULT_LATEST_CONFIG.copy()
     except Exception as e:
-        print(color_text(f"Error loading latest config: {str(e)}", 'error'))
+        print(color_text(translator.translate('utils.error_loading_latest_config', error=str(e)), 'error'))
         return cfg.DEFAULT_LATEST_CONFIG.copy()
 
 
@@ -50,7 +51,7 @@ def load_latest_paths() -> dict:
                 return json.load(f)
         return {}
     except Exception as e:
-        print(color_text(f"Error loading latest paths: {str(e)}", 'error'))
+        print(color_text(translator.translate('utils.error_loading_latest_paths', error=str(e)), 'error'))
         return {}
 
 def color_text(text: str, color_type: str) -> str:
@@ -82,7 +83,7 @@ def load_config() -> dict:
 
         return cfg.DEFAULT_CONFIG.copy()
     except Exception as e:
-        print(color_text(f"Error loading config: {str(e)}", 'error'))
+        print(color_text(translator.translate('utils.error_loading_config', error=str(e)), 'error'))
         return cfg.DEFAULT_CONFIG.copy()
 
 
@@ -131,7 +132,7 @@ def save_config(config: dict):
     """Сохраняет конфигурацию в файл"""
     try:
         if not config.get('project_path'):
-            print(color_text("Cannot save config: project path is not set", 'error'))
+            print(color_text(translator.translate('utils.cannot_save_config'), 'error'))
             return
 
         output_file = Path(config['output_path']).name
@@ -141,9 +142,9 @@ def save_config(config: dict):
         config_path = Path(config['project_path']) / cfg.CONFIG_FILE
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2)
-        print(color_text(f"Configuration saved successfully in {config_path}", 'success'))
+        print(color_text(translator.translate('utils.config_saved_successfully', path=config_path), 'success'))
     except Exception as e:
-        print(color_text(f"Error saving config: {str(e)}", 'error'))
+        print(color_text(translator.translate('utils.error_saving_config', error=str(e)), 'error'))
 
 
 def get_input(prompt: str, default: Optional[str] = None) -> str:
@@ -263,42 +264,42 @@ def edit_config(config: dict, cli_project_path: str = None) -> dict:
             config['output_path'] = str(Path(project_path) / "project_documentation.md")
         return config
 
-    print(color_text("\nCurrent configuration:", 'highlight'))
+    print(color_text(f"\n{translator.translate('utils.current_configuration')}", 'highlight'))
     print(json.dumps(config, indent=2))
 
-    print(color_text("\nEdit configuration:", 'highlight'))
-    config['project_path'] = get_input("Project path", config['project_path'])
+    print(color_text(f"\n{translator.translate('utils.edit_configuration')}", 'highlight'))
+    config['project_path'] = get_input(translator.translate('utils.project_path'), config['project_path'])
 
     if config['project_path'] and config['output_path'] == cfg.DEFAULT_CONFIG['output_path']:
         config['output_path'] = str(Path(config['project_path']) / "project_documentation.md")
 
-    config['output_path'] = get_input("Output file path", config['output_path'])
+    config['output_path'] = get_input(translator.translate('utils.output_file_path'), config['output_path'])
 
-    print(color_text("\nFilter settings:", 'highlight'))
-    config['show_hidden'] = input(color_text("Show hidden files? (y/n) [n]: ", 'info')).lower() == 'y'
+    print(color_text(f"\n{translator.translate('utils.filter_settings')}", 'highlight'))
+    config['show_hidden'] = input(color_text(translator.translate('utils.show_hidden_files'), 'info')).lower() == 'y'
 
-    print(color_text("\nWhitelist settings:", 'highlight'))
-    print(color_text("Current whitelist paths (empty means all files):", 'info'),
+    print(color_text(f"\n{translator.translate('utils.whitelist_settings')}", 'highlight'))
+    print(color_text(translator.translate('utils.current_whitelist_paths'), 'info'),
           ', '.join(config.get('whitelist_paths', [])))
-    if input(color_text("Edit? (y/n) [n]: ", 'info')).lower() == 'y':
+    if input(color_text(translator.translate('utils.edit_question'), 'info')).lower() == 'y':
         new_paths = input(
-            color_text("Enter paths to include (comma separated, * for wildcard, relative to project): ", 'info'))
+            color_text(translator.translate('utils.enter_paths_to_include'), 'info'))
         config['whitelist_paths'] = [p.strip() for p in new_paths.split(',') if p.strip()]
 
-    print(color_text("\nIgnore settings:", 'highlight'))
-    print(color_text("Current ignored folders:", 'info'), ', '.join(config['ignore_folders']))
-    if input(color_text("Edit? (y/n) [n]: ", 'info')).lower() == 'y':
-        new_folders = input(color_text("Enter folders to ignore (comma separated): ", 'info'))
+    print(color_text(f"\n{translator.translate('utils.ignore_settings')}", 'highlight'))
+    print(color_text(translator.translate('utils.current_ignored_folders'), 'info'), ', '.join(config['ignore_folders']))
+    if input(color_text(translator.translate('utils.edit_question'), 'info')).lower() == 'y':
+        new_folders = input(color_text(translator.translate('utils.enter_folders_to_ignore'), 'info'))
         config['ignore_folders'] = [f.strip() for f in new_folders.split(',') if f.strip()] or config['ignore_folders']
 
-    print(color_text("\nCurrent ignored files:", 'info'), ', '.join(config['ignore_files']))
-    if input(color_text("Edit? (y/n) [n]: ", 'info')).lower() == 'y':
-        new_files = input(color_text("Enter file patterns to ignore (comma separated, * for wildcard): ", 'info'))
+    print(color_text(f"\n{translator.translate('utils.current_ignored_files')}", 'info'), ', '.join(config['ignore_files']))
+    if input(color_text(translator.translate('utils.edit_question'), 'info')).lower() == 'y':
+        new_files = input(color_text(translator.translate('utils.enter_file_patterns_to_ignore'), 'info'))
         config['ignore_files'] = [f.strip() for f in new_files.split(',') if f.strip()] or config['ignore_files']
 
-    print(color_text("\nCurrent ignored paths:", 'info'), ', '.join(config['ignore_paths']))
-    if input(color_text("Edit? (y/n) [n]: ", 'info')).lower() == 'y':
-        new_paths = input(color_text("Enter full paths to ignore (comma separated, * for wildcard): ", 'info'))
+    print(color_text(f"\n{translator.translate('utils.current_ignored_paths')}", 'info'), ', '.join(config['ignore_paths']))
+    if input(color_text(translator.translate('utils.edit_question'), 'info')).lower() == 'y':
+        new_paths = input(color_text(translator.translate('utils.enter_full_paths_to_ignore'), 'info'))
         config['ignore_paths'] = [p.strip() for p in new_paths.split(',') if p.strip()] or config['ignore_paths']
 
     return config
