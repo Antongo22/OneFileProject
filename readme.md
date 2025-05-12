@@ -31,6 +31,7 @@ pip install colorama
 cd OneFileProject  
 python installer.py  # Установка с созданием команды ofp
 ```
+❗ВАЖНО! Для линукса может понадобится `sudo` с командой `python installer.py`
 ❗️ Эту папку можно удалять, тк программа уже установилась.
 
 
