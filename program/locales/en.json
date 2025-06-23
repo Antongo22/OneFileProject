@@ -169,7 +169,11 @@
         "confirm_path": "Confirm Path",
         "close": "Close",
         "project_path_title": "Project path:",
-        "output_path_title": "Output path:"
+        "output_path_title": "Output path:",
+        "tree_button": "View Directory Tree",
+        "tree_view_title": "Directory Tree View",
+        "select_directory": "Select Directory:",
+        "show_tree_button": "Show Tree Structure"
     },
     "utils": {
         "error_saving_latest_config": "Error saving latest config: {error}",

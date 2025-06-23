@@ -1,0 +1,8 @@
+__pycache__
+
+.idea
+
+data/latest_config.json
+
+project_documentation.md
+project_documenter_config.json

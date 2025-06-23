@@ -1,5 +1,5 @@
 {
-  "language": "en",
   "config_path": "C:\\Users\\anton\\Desktop\\\u041f\u043e\u043b\u0435\u0437\u043d\u044b\u0435 \u0444\u0430\u0439\u043b\u044b\\\u0420\u0430\u0431\u043e\u0442\u0430\\OneFileProject\\project_documenter_config.json",
-  "output_path": "C:\\Users\\anton\\Desktop\\\u041f\u043e\u043b\u0435\u0437\u043d\u044b\u0435 \u0444\u0430\u0439\u043b\u044b\\\u0420\u0430\u0431\u043e\u0442\u0430\\OneFileProject\\project_documentation.md"
+  "output_path": "C:\\Users\\anton\\Desktop\\\u041f\u043e\u043b\u0435\u0437\u043d\u044b\u0435 \u0444\u0430\u0439\u043b\u044b\\\u0420\u0430\u0431\u043e\u0442\u0430\\OneFileProject\\project_documentation.md",
+  "language": "ru"
 }

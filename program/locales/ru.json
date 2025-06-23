@@ -169,7 +169,11 @@
         "confirm_path": "Подтвердить путь",
         "close": "Закрыть",
         "project_path_title": "Путь к проекту:",
-        "output_path_title": "Путь для вывода:"
+        "output_path_title": "Путь для вывода:",
+        "tree_button": "Просмотр структуры",
+        "tree_view_title": "Просмотр структуры директории",
+        "select_directory": "Выберите директорию:",
+        "show_tree_button": "Показать структуру"
     },
     "utils": {
         "error_saving_latest_config": "Ошибка сохранения последней конфигурации: {error}",
