@@ -370,7 +370,7 @@ class MarkdownViewer(Screen):
             )
             # Отдельный контейнер для кнопки
             with Container(id="close-button-container"):
-                yield Button(translator.translate('common.close'), id="close-viewer")
+                yield Button(translator.translate('common.cancel'), id="close-viewer")
 
     @on(Button.Pressed, "#close-viewer")
     def close_viewer(self):
@@ -419,13 +419,9 @@ class TreeViewScreen(Screen):
         margin-right: 1;
     }
     
-    #show-tree {
-        min-width: 16;
+    #show-tree, #close-tree {
+        width: 16;
         margin-right: 1;
-    }
-    
-    #close-tree {
-        min-width: 12;
     }
     
     #tree-output-container {
@@ -605,8 +601,8 @@ class OFPTUI(App):
                 yield Button(translator.translate('tui.unpack_button'), id="unpack")
                 yield Button(translator.translate('tui.info_button'), id="info")
                 yield Button(translator.translate('tui.view_md_button'), id="view_md")
-                yield Button(translator.translate('tui.language_button'), id="change-lang")
                 yield Button(translator.translate('tui.tree_button'), id="tree-view")
+                yield Button(translator.translate('tui.language_button'), id="change-lang")
                 
         yield Static(translator.translate('tui.app_title'), id="content")
         
