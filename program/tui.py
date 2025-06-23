@@ -377,6 +377,164 @@ class MarkdownViewer(Screen):
         self.app.pop_screen()
 
 
+class TreeViewScreen(Screen):
+    """Экран просмотра дерева директорий"""
+    BINDINGS = [("`", "pop_screen", "Закрыть")]
+    CSS = SHARED_CSS + """
+    #tree-container {
+        width: 95%;
+        height: 90%;
+        margin: 1;
+        border: solid $accent;
+        padding: 1;
+    }
+    
+    #tree-title {
+        width: 100%;
+        content-align: center middle;
+        color: $secondary;
+        text-style: bold;
+        margin-bottom: 1;
+    }
+    
+    #tree-header {
+        width: 100%;
+        height: auto;
+    }
+    
+    #dir-label {
+        margin-bottom: 1;
+    }
+    
+    #controls-row {
+        width: 100%;
+        height: auto;
+        layout: horizontal;
+        margin-bottom: 1;
+        align: left middle;
+    }
+    
+    #directory-input {
+        width: 65%;
+        margin-right: 1;
+    }
+    
+    #show-tree {
+        min-width: 16;
+        margin-right: 1;
+    }
+    
+    #close-tree {
+        min-width: 12;
+    }
+    
+    #tree-output-container {
+        width: 100%;
+        height: 70%;
+        overflow: auto scroll;
+        border: solid $accent-darken-1;
+        padding: 1;
+    }
+    
+    #tree-output {
+        width: 100%;
+        height: auto;
+    }
+    """
+    
+    def __init__(self):
+        super().__init__()
+        # По умолчанию текущая директория - корень проекта
+        self.directory = os.getcwd()
+    
+    def compose(self) -> ComposeResult:
+        """Компоновка элементов экрана"""
+        yield Container(
+            Static(translator.translate('tui.tree_view_title'), id="tree-title"),
+            Container(
+                Static(f"{translator.translate('tui.select_directory')}:", id="dir-label"),
+                Container(
+                    Input(value=self.directory, id="directory-input"),
+                    Button(translator.translate('tui.show_tree_button'), id="show-tree", variant="primary"),
+                    Button(translator.translate('common.cancel'), id="close-tree"),
+                    id="controls-row"
+                ),
+                id="tree-header"
+            ),
+            Container(
+                Static("", id="tree-output"),
+                id="tree-output-container"
+            ),
+            id="tree-container"
+        )
+    
+    def on_mount(self) -> None:
+        """При монтировании экрана показываем дерево текущей директории"""
+        # Обновляем переводы кнопок
+        self.update_translations()
+        # Показываем дерево директорий
+        self.show_tree()
+        
+    def update_translations(self):
+        """Обновить все переводы в интерфейсе с защитой от ошибок"""
+        try:
+            # Заголовок
+            title = self.query("#tree-title")
+            if title:
+                title.first().update(translator.translate('tui.tree_view_title'))
+                
+            # Метка для выбора директории
+            label = self.query("#dir-label")
+            if label:
+                label.first().update(f"{translator.translate('tui.select_directory')}:")
+                
+            # Кнопки
+            show_btn = self.query("#show-tree")
+            if show_btn:
+                show_btn.first().label = translator.translate('tui.show_tree_button')
+                
+            close_btn = self.query("#close-tree")
+            if close_btn:
+                close_btn.first().label = translator.translate('common.cancel')
+        except Exception as e:
+            print(f"Ошибка при обновлении переводов: {e}")
+            # Не прерываем выполнение при ошибках перевода
+    
+    def show_tree(self) -> None:
+        """Показать дерево директорий"""
+        try:
+            # Получаем дерево директорий как текст
+            tree_text = commands.show_directory_tree(self.directory)
+            
+            # Заменяем ANSI-коды на пустые строки
+            import re
+            # Паттерн для поиска ANSI escape-последовательностей
+            ansi_pattern = re.compile(r'\x1B\[[0-9;]*[mK]')
+            clean_text = ansi_pattern.sub('', tree_text)
+            
+            # Выводим очищенный текст
+            self.query_one("#tree-output").update(clean_text)
+        except Exception as e:
+            error_text = translator.translate('common.error') + f": {str(e)}"
+            self.query_one("#tree-output").update(error_text)
+    
+    @on(Button.Pressed, "#show-tree")
+    def on_show_tree(self) -> None:
+        """Обработчик для кнопки показа дерева"""
+        dir_path = self.query_one("#directory-input").value
+        if os.path.isdir(dir_path):
+            self.directory = dir_path
+            self.show_tree()
+        else:
+            error_msg = translator.translate('common.error') + f": {dir_path} " + translator.translate('commands.not_directory').replace("{path}", "")
+            self.query_one("#tree-output").update(error_msg)
+    
+    @on(Button.Pressed, "#close-tree")
+    def on_close_tree(self) -> None:
+        """Закрыть экран просмотра дерева директорий"""
+        self.app.pop_screen()
+
+
 class OFPTUI(App):
     """Главный TUI интерфейс"""
     CSS = SHARED_CSS + """
@@ -388,7 +546,8 @@ class OFPTUI(App):
         layout: vertical;
         width: 100%;
         height: auto;
-        align: center middle;
+        padding: 0;
+        margin-bottom: 1;
     }
     #button-row1, #button-row2 {
         layout: horizontal;
@@ -412,6 +571,7 @@ class OFPTUI(App):
         color: $text;
         text-style: none;
     }
+    
     #content {
         width: 95%;
         height: 30;
@@ -419,9 +579,9 @@ class OFPTUI(App):
         margin: 1;
         padding: 1;
         background: $boost;
+        color: $text;
         overflow: auto;
-    }
-    """
+    } """
     
     BINDINGS = [
         ("q", "quit", "Exit"),
@@ -446,7 +606,8 @@ class OFPTUI(App):
                 yield Button(translator.translate('tui.info_button'), id="info")
                 yield Button(translator.translate('tui.view_md_button'), id="view_md")
                 yield Button(translator.translate('tui.language_button'), id="change-lang")
-
+                yield Button(translator.translate('tui.tree_button'), id="tree-view")
+                
         yield Static(translator.translate('tui.app_title'), id="content")
         
     def on_mount(self) -> None:
@@ -614,15 +775,22 @@ class OFPTUI(App):
         self.query_one("#info").label = translator.translate('tui.info_button')
         self.query_one("#view_md").label = translator.translate('tui.view_md_button')
         self.query_one("#change-lang").label = translator.translate('tui.language_button')
+        self.query_one("#tree-view").label = translator.translate('tui.tree_button')
         
         # Восстанавливаем содержимое
         content = self.query_one("#content")
         content.update(current_content)
         
     @on(Button.Pressed, "#change-lang")
-    async def on_change_language(self):
-        """Смена языка интерфейса"""
-        await self.push_screen(LanguageScreen())
+    def on_change_language(self) -> None:
+        """Смена языка"""
+        lang_screen = LanguageScreen()
+        self.push_screen(lang_screen)
+        
+    @on(Button.Pressed, "#tree-view")
+    async def on_view_tree(self) -> None:
+        """Открыть экран просмотра дерева директорий"""
+        await self.push_screen(TreeViewScreen())
 
 # Глобальная переменная для отслеживания необходимости перезапуска
 restart_required = False
