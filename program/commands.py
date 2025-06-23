@@ -425,3 +425,89 @@ def change_language(lang: str):
         return True, translator.translate("commands.language_changed", lang=lang)
     except Exception as e:
         return False, translator.translate("commands.language_change_error", error=str(e))
+
+
+def show_directory_tree(directory_path: str) -> str:
+    """Отображает древовидную структуру директории в консоли"""
+    print(utils.color_text(translator.translate('commands.generating_tree', path=directory_path, default=f"Generating directory tree for: {directory_path}"), 'info'))
+    try:
+        if not os.path.exists(directory_path):
+            return utils.color_text(translator.translate("commands.path_not_exists", path=directory_path), 'error')
+        if not os.path.isdir(directory_path):
+            return utils.color_text(translator.translate("commands.not_directory", path=directory_path), 'error')
+            
+        directory_path = os.path.abspath(directory_path)
+        root_name = os.path.basename(directory_path)
+        
+        config = {
+            'ignore_folders': ['.git', '__pycache__', '.venv', 'node_modules'],
+            'ignore_files': ['*.pyc', '*.pyo', '*.pyd', '*.so', '*.dll', '*.exe'],
+            'ignore_paths': [],
+            'show_hidden': False,
+            'whitelist_paths': []
+        }
+        
+        user_config = utils.load_config()
+        if user_config:
+            for key in ['ignore_folders', 'ignore_files', 'ignore_paths', 'show_hidden', 'whitelist_paths']:
+                if key in user_config:
+                    config[key] = user_config[key]
+        
+        def build_tree(path, prefix=''):
+            files = []
+            dirs = []
+            
+            try:
+                for item in sorted(os.listdir(path)):
+                    full_path = os.path.join(path, item)
+                    rel_path = os.path.relpath(full_path, directory_path)
+                    
+                    if not config['show_hidden'] and item.startswith('.'):
+                        continue
+                    if any(re.match(pattern.replace('*', '.*'), item) for pattern in config['ignore_files']) and not os.path.isdir(full_path):
+                        continue
+                    if item in config['ignore_folders'] and os.path.isdir(full_path):
+                        continue
+                    if any(re.match(pattern.replace('*', '.*'), rel_path) for pattern in config['ignore_paths']):
+                        continue
+                    
+                    if config['whitelist_paths'] and not any(re.match(pattern.replace('*', '.*'), rel_path) for pattern in config['whitelist_paths']):
+                        if not any(rel_path.startswith(os.path.normpath(p)) for p in config['whitelist_paths']):
+                            continue
+                            
+                    if os.path.isdir(full_path):
+                        dirs.append(item)
+                    else:
+                        files.append(item)
+            except PermissionError:
+                return "├── [Permission denied]\n"
+            except Exception as e:
+                return f"├── [Error: {str(e)}]\n"
+            
+            tree = ""
+            count = len(dirs) + len(files)
+            idx = 0
+            
+            for i, d in enumerate(dirs):
+                idx += 1
+                is_last = (idx == count)
+                current_prefix = "└── " if is_last else "├── "
+                next_prefix = "    " if is_last else "│   "
+                full_path = os.path.join(path, d)
+                tree += f"{prefix}{current_prefix}{d}/\n"
+                tree += build_tree(full_path, prefix + next_prefix)
+        
+            for i, f in enumerate(files):
+                idx += 1
+                is_last = (idx == count)
+                tree += f"{prefix}{'└── ' if is_last else '├── '}{f}\n"
+            
+            return tree
+        
+        tree = build_tree(directory_path)
+        result = f"\n{root_name}/\n{tree}"
+        return utils.color_text(result, 'highlight')
+    except Exception as e:
+        import traceback
+        trace = traceback.format_exc()
+        return utils.color_text(f"\n{translator.translate('common.error')}: {str(e)}\n{trace}", 'error')

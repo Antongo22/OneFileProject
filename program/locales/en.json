@@ -62,6 +62,7 @@
         "current_language": "Current language: {lang}",
         "usage": "Usage: ofp lang [en|ru]",
         "current_working_directory": "Current working directory",
+        "generating_tree": "Generating directory tree for: {path}",
         "unpack_required_args": "Error: unpack requires 2 arguments - the documentation file and the target folder",
         "path_not_exists": "Error: Path '{path}' does not exist!",
         "not_directory": "Error: '{path}' is not a directory!",

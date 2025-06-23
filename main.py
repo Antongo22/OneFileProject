@@ -82,6 +82,13 @@ def parse_args():
         elif "pwd" in sys.argv[1:]:
             print(utils.color_text(f"{translator.translate('commands.current_working_directory', default='Current working directory')}: {Path(__file__).parent}", 'info'))
             sys.exit(0)
+        elif "tree" in sys.argv[1:]:
+            if len(sys.argv) > 2:
+                target_path = sys.argv[2]
+            else:
+                target_path = os.getcwd()
+            print(commands.show_directory_tree(target_path))
+            sys.exit(0)
         elif "tui" in sys.argv[1:]:
             run_tui()
             sys.exit(0)
