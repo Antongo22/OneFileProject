@@ -336,6 +336,51 @@ def print_header():
     # Заголовок не переводим, так как это ASCII-арт
     print(utils.color_text(header, 'highlight'))
     print(utils.color_text("=" * 60, 'info') + "\n")
+
+
+def init_config(dir_path: str = None, open_file: bool = False) -> tuple[bool, str]:
+    """
+    Создает стандартный конфигурационный файл в указанной директории
+    
+    Args:
+        dir_path: Путь к директории, в которой нужно создать файл
+        open_file: Если True, открывает файл в приложении по умолчанию
+        
+    Returns:
+        tuple: (успех операции (bool), сообщение)
+    """
+    try:
+        if dir_path is None:
+            return False, translator.translate('commands.specify_directory')
+
+        if not os.path.exists(dir_path):
+            return False, translator.translate('commands.directory_not_exists', path=dir_path)
+            
+        if not os.path.isdir(dir_path):
+            return False, translator.translate('commands.not_directory', path=dir_path)
+
+        config_path = os.path.join(dir_path, cfg.CONFIG_FILE)
+
+        if os.path.exists(config_path):
+            return False, translator.translate('commands.config_already_exists', path=config_path)
+
+        default_config = cfg.DEFAULT_CONFIG.copy()
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump(default_config, f, indent=4, ensure_ascii=False)
+            
+        success_msg = translator.translate('commands.config_created', path=config_path)
+
+        if open_file:
+            open_config_file()
+            open_msg = translator.translate('commands.file_opened', path=config_path)
+            print(utils.color_text(open_msg, 'info'))
+            
+        return True, success_msg
+    except Exception as e:
+        error_msg = translator.translate('commands.config_init_error', error=str(e))
+        print(utils.color_text(error_msg, 'error'))
+        return False, error_msg
+    
 def generate_documentation(project_path: str, output_path: str, config: Optional[dict] = None) -> str:
     """
     Генерирует документацию проекта и сохраняет в указанный файл
