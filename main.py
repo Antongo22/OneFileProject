@@ -90,15 +90,19 @@ def parse_args():
             sys.exit(0)
         elif "init" in sys.argv[1:]:
             open_after_creation = "--open" in sys.argv
+            remake_config = "--remake" in sys.argv
+
             if "--open" in sys.argv:
                 sys.argv.remove("--open")
-            
+            if "--remake" in sys.argv:
+                sys.argv.remove("--remake")
+
             if len(sys.argv) > 2:
                 target_path = sys.argv[2]
             else:
                 target_path = os.getcwd()
-            
-            success, message = commands.init_config(target_path, open_after_creation)
+
+            success, message = commands.init_config(target_path, open_after_creation, remake_config)
             print(utils.color_text(message, 'success' if success else 'error'))
             sys.exit(0)
         elif "tui" in sys.argv[1:]:

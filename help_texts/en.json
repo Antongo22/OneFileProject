@@ -27,7 +27,7 @@
         ["help", ["-ru", "Show help in Russian"], ["-en", "Show help in English"]],
         ["unpack", ["<doc_file>", "Path to the documentation file"], ["<target_dir>", "Path to the target directory"]],
         ["tree", ["<dir_path>", "Directory path to display tree structure"]],
-        ["init", ["<dir_path>", "Directory path to create config file in"], ["--open", "Open the file after creation"]]
+        ["init", ["<dir_path>", "Directory path to create config file in"], ["--open", "Open the file after creation"], ["--remake", "Force delete and recreate config file if exists"]]
     ],
     "global_options": [
         ["-h, --help", "Show this help message"]

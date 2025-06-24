@@ -97,6 +97,7 @@
         "target_not_empty": "Error: The target directory '{path}' is not empty",
         "project_required": "Error: Project path is required!",
         "dir_not_exists": "Error: Directory '{path}' does not exist!",
+        "config_delete_error": "Error deleting configuration file {path}: {error}",
         "doc_generated": "Documentation successfully generated!",
         "output_file": "Output file: {path}",
         "files_processed": "Total files processed: {count}",

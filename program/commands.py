@@ -338,13 +338,14 @@ def print_header():
     print(utils.color_text("=" * 60, 'info') + "\n")
 
 
-def init_config(dir_path: str = None, open_file: bool = False) -> tuple[bool, str]:
+def init_config(dir_path: str = None, open_file: bool = False, remake: bool = False) -> tuple[bool, str]:
     """
     Создает стандартный конфигурационный файл в указанной директории
     
     Args:
         dir_path: Путь к директории, в которой нужно создать файл
         open_file: Если True, открывает файл в приложении по умолчанию
+        remake: Если True, пересоздаёт файл, даже если он уже существует
         
     Returns:
         tuple: (успех операции (bool), сообщение)
@@ -362,7 +363,13 @@ def init_config(dir_path: str = None, open_file: bool = False) -> tuple[bool, st
         config_path = os.path.join(dir_path, cfg.CONFIG_FILE)
 
         if os.path.exists(config_path):
-            return False, translator.translate('commands.config_already_exists', path=config_path)
+            if remake:
+                try:
+                    os.remove(config_path)
+                except Exception as e:
+                    return False, translator.translate('commands.config_delete_error', path=config_path, error=str(e))
+            else:
+                return False, translator.translate('commands.config_already_exists', path=config_path)
 
         default_config = cfg.DEFAULT_CONFIG.copy()
         with open(config_path, 'w', encoding='utf-8') as f:
