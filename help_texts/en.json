@@ -24,7 +24,8 @@
     "command_options": [
         ["reset", ["-c", "Reset only config file"], ["-o", "Reset only output file"]],
         ["help", ["-ru", "Show help in Russian"], ["-en", "Show help in English"]],
-        ["unpack", ["<doc_file>", "Path to the documentation file"], ["<target_dir>", "Path to the target directory"]]
+        ["unpack", ["<doc_file>", "Path to the documentation file"], ["<target_dir>", "Path to the target directory"]],
+        ["tree", ["<dir_path>", "Path to directory to display structure"]]
     ],
     "global_options": [
         ["-h, --help", "Show this help message"]
